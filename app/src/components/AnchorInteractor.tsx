@@ -14,11 +14,13 @@ interface UserProfile {
 }
 
 interface ArenaAccount {
+  selfkey: PublicKey;
   creator: PublicKey;
   bump: number;
 }
 
 interface TradingAccountForArena {
+  selfkey: PublicKey;
   pubkey: PublicKey;
   tradeCount: number;
   bump: number;
@@ -40,6 +42,7 @@ const AnchorInteractor = () => {
   const [tradingAccounts, setTradingAccounts] = useState<Map<string, TradingAccountForArena>>(new Map());
   const [trades, setTrades] = useState<Map<string, TradeAccount[]>>(new Map());
   const [loading, setLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [expandedArenas, setExpandedArenas] = useState<Set<string>>(new Set());
   
   // Memoize provider and program to avoid recreating on every render
@@ -57,6 +60,7 @@ const AnchorInteractor = () => {
   // Fetch user profile
   const fetchUserProfile = useCallback(async () => {
     if (!wallet || !program) return null;
+    
     try {
       const [pda] = PublicKey.findProgramAddressSync(
         [Buffer.from("user_profile_account"), wallet.publicKey.toBuffer()],
@@ -70,6 +74,8 @@ const AnchorInteractor = () => {
       console.error("Profile not found:", error);
       setUserProfile(null);
       return null;
+    } finally {
+      setIsInitializing(false);
     }
   }, [wallet, program]);
 
@@ -95,7 +101,10 @@ const AnchorInteractor = () => {
           );
 
           const arenaAccount = await program.account.arenaAccount.fetch(pda);
-          arenas.push(arenaAccount as ArenaAccount);
+          arenas.push({
+            ...arenaAccount,
+            selfkey: pda,
+          });
         } catch (error) {
           console.error(`Error fetching arena ${i}:`, error);
         }
@@ -107,41 +116,45 @@ const AnchorInteractor = () => {
     }
   }, [userProfile, wallet, program]);
 
-  // Fetch all arenas (simplified - in real app you'd need a more sophisticated approach)
-  const fetchAllArenas = useCallback(async () => {
-    // This is a simplified version - in a real app you'd need to track all arenas
-    // For now, we'll just show user's arenas
-    setAllArenas(userArenas);
-  }, [userArenas]);
 
-  // Load data on component mount
+  // Load data on component mount - only once
   useEffect(() => {
-    if (wallet) {
-      fetchUserProfile().then(profile => {
-        if (profile) {
-          fetchUserArenas();
-        }
-      });
+    if (wallet && program) {
+      fetchUserProfile();
     }
-  }, [wallet, fetchUserProfile, fetchUserArenas]);
+  }, [wallet, program, fetchUserProfile]);
 
-  // Load arenas when profile changes
+  // Load arenas when profile changes - only when profile actually changes
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile && program && wallet) {
       fetchUserArenas();
     }
-  }, [userProfile, fetchUserArenas]);
+  }, [userProfile?.arenasCreatedCount, fetchUserArenas, program, wallet, userProfile]);
 
-  // Load all arenas when user arenas change
+  // Load all arenas when user arenas change - only when count changes
   useEffect(() => {
-    fetchAllArenas();
-  }, [userArenas, fetchAllArenas]);
+    if (userArenas.length > 0) {
+      setAllArenas(userArenas);
+    }
+  }, [userArenas]);
 
   // Early return if no wallet
   if (!wallet) { 
     return (
       <div>
         No wallet. Please connect wallet to see this component
+      </div>
+    )
+  }
+
+  // Show loading state during initialization
+  if (isInitializing) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>Loading your profile and arenas...</p>
+        </div>
       </div>
     )
   }
@@ -235,6 +248,13 @@ const AnchorInteractor = () => {
   const fetchTradingAccountForArena = async (arenaPubkey: PublicKey) => {
     if (!program || !wallet) return null;
     
+    const arenaKey = arenaPubkey.toString();
+    
+    // Don't fetch if we already have it
+    if (tradingAccounts.has(arenaKey)) {
+      return tradingAccounts.get(arenaKey);
+    }
+    
     try {
       const [pda] = PublicKey.findProgramAddressSync(
         [
@@ -246,8 +266,20 @@ const AnchorInteractor = () => {
       );
 
       const tradingAccount = await program.account.tradingAccountForArena.fetch(pda);
-      setTradingAccounts(prev => new Map(prev.set(arenaPubkey.toString(), tradingAccount as TradingAccountForArena)));
-      return tradingAccount as TradingAccountForArena;
+      setTradingAccounts(prev => new Map(prev.set(arenaKey, {
+        ...tradingAccount,
+        selfkey: pda,
+      })));
+
+      fetchTradesForTradingAccountInArena({
+        ...tradingAccount,
+        selfkey: pda,
+      })
+
+      return {
+        ...tradingAccount,
+        selfkey: pda,
+      } as TradingAccountForArena;
     } catch (error) {
       console.error("Trading account not found:", error);
       return null;
@@ -277,7 +309,7 @@ const AnchorInteractor = () => {
       
       // Refresh trading account and trades
       await fetchTradingAccountForArena(arenaPubkey);
-      await fetchTradesForArena(arenaPubkey);
+      // TODO: fetch trades for trading account and arena
     } catch (error) {
       console.error("Error creating trade:", error);
     } finally {
@@ -286,23 +318,25 @@ const AnchorInteractor = () => {
   };
 
   // Fetch trades for specific arena
-  const fetchTradesForArena = async (arenaPubkey: PublicKey) => {
+  const fetchTradesForTradingAccountInArena = async (tradingAccount: TradingAccountForArena) => {
     if (!program || !wallet) return;
     
     try {
-      const tradingAccount = tradingAccounts.get(arenaPubkey.toString());
-      if (!tradingAccount) return;
+      // const tradingAccount = tradingAccounts.get(tradingAccountKey.toString());
+      // if (!tradingAccount) return;
 
       const trades: TradeAccount[] = [];
       
       for (let i = 0; i < tradingAccount.tradeCount; i++) {
         try {
+          const countLE = new BN(i).toArrayLike(Buffer, "le", 1);
+
           const [pda] = PublicKey.findProgramAddressSync(
             [
               Buffer.from("trade_account"),
               wallet.publicKey.toBuffer(),
-              arenaPubkey.toBuffer(),
-              Buffer.from(i.toString())
+              tradingAccount.selfkey.toBuffer(),
+              countLE
             ],
             new PublicKey(idl.address),
           );
@@ -314,20 +348,25 @@ const AnchorInteractor = () => {
         }
       }
       
-      setTrades(prev => new Map(prev.set(arenaPubkey.toString(), trades)));
+      setTrades(prev => new Map(prev.set(tradingAccount.selfkey.toString(), trades)));
     } catch (error) {
       console.error("Error fetching trades:", error);
     }
   };
 
   // Toggle arena expansion
-  const toggleArenaExpansion = (arenaPubkey: string) => {
+  const toggleArenaExpansion = async (arenaPubkey: string) => {
     setExpandedArenas(prev => {
       const newSet = new Set(prev);
       if (newSet.has(arenaPubkey)) {
         newSet.delete(arenaPubkey);
       } else {
         newSet.add(arenaPubkey);
+        // Fetch trading account when expanding
+        const arena = allArenas.find(a => a.selfkey.toString() === arenaPubkey);
+        if (arena) {
+          fetchTradingAccountForArena(arena.selfkey);
+        }
       }
       return newSet;
     });
@@ -335,7 +374,23 @@ const AnchorInteractor = () => {
   
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8 text-center">Ephemeral Rollups Arena</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Ephemeral Rollups Arena</h1>
+        <Button 
+          onClick={() => {
+            setIsInitializing(true);
+            fetchUserProfile().then(profile => {
+              if (profile) {
+                fetchUserArenas();
+              }
+            });
+          }}
+          disabled={loading || isInitializing}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          {loading || isInitializing ? "Refreshing..." : "Refresh Data"}
+        </Button>
+      </div>
       
       {/* Section 1: Create Arenas */}
       <div className="mb-12">
@@ -371,7 +426,7 @@ const AnchorInteractor = () => {
             {userArenas.length > 0 ? (
               <div className="space-y-2">
                 {userArenas.map((arena, index) => (
-                  <div key={arena.creator.toString()} className="p-3 bg-gray-50 rounded">
+                  <div key={index} className="p-3 bg-gray-50 rounded">
                     <p className="font-medium">Arena #{index + 1}</p>
                     <p className="text-sm text-gray-600">Creator: {arena.creator.toString()}</p>
                     <p className="text-sm text-gray-600">Bump: {arena.bump}</p>
@@ -407,7 +462,7 @@ const AnchorInteractor = () => {
           {allArenas.length > 0 ? (
             <div className="space-y-4">
               {allArenas.map((arena, index) => {
-                const arenaKey = arena.creator.toString();
+                const arenaKey = arena.selfkey.toString();
                 const isExpanded = expandedArenas.has(arenaKey);
                 const tradingAccount = tradingAccounts.get(arenaKey);
                 
@@ -419,6 +474,7 @@ const AnchorInteractor = () => {
                     >
                       <div>
                         <p className="font-medium">Arena #{index + 1}</p>
+                        <p className="text-sm text-gray-600">Pubkey: {arena.selfkey.toString()}</p>
                         <p className="text-sm text-gray-600">Creator: {arena.creator.toString()}</p>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -445,7 +501,7 @@ const AnchorInteractor = () => {
                                   {JSON.stringify(tradingAccount, null, 2)}
                                 </pre>
                                 <Button 
-                                  onClick={() => createTradeInArena(arena.creator)} 
+                                  onClick={() => createTradeInArena(arena.selfkey)} 
                                   disabled={loading}
                                   className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm"
                                 >
@@ -456,7 +512,7 @@ const AnchorInteractor = () => {
                               <div>
                                 <p className="text-gray-600 mb-2">No trading account for this arena.</p>
                                 <Button 
-                                  onClick={() => createTradingAccountForArena(arena.creator)} 
+                                  onClick={() => createTradingAccountForArena(arena.selfkey)} 
                                   disabled={loading}
                                   className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
                                 >
@@ -469,16 +525,16 @@ const AnchorInteractor = () => {
                           {/* Trades Section */}
                           {tradingAccount && (
                             <div>
-                              <h4 className="font-medium mb-2">Trades ({trades.get(arenaKey)?.length || 0})</h4>
+                              <h4 className="font-medium mb-2">Trades ({trades.get(tradingAccount.selfkey.toString())?.length || 0})</h4>
                               <Button 
-                                onClick={() => fetchTradesForArena(arena.creator)} 
+                                onClick={() => fetchTradesForTradingAccountInArena(tradingAccount)} 
                                 className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm mb-2"
                               >
                                 Load Trades
                               </Button>
-                              {trades.get(arenaKey) && trades.get(arenaKey)!.length > 0 && (
+                              {trades.get(tradingAccount.selfkey.toString()) && trades.get(tradingAccount.selfkey.toString())!.length > 0 && (
                                 <div className="space-y-2">
-                                  {trades.get(arenaKey)!.map((trade, tradeIndex) => (
+                                  {trades.get(tradingAccount.selfkey.toString())!.map((trade, tradeIndex) => (
                                     <div key={tradeIndex} className="p-2 bg-white rounded border">
                                       <p className="text-sm">Trade #{tradeIndex + 1}</p>
                                       <p className="text-xs text-gray-600">Pubkey: {trade.pubkey.toString()}</p>
