@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-ephemeral_rollups = "BaFPZGCJ2kKRyEgJPUcW7kBWTmRLgYtpUYYVrFHvBJDF"
+ephemeral_rollups = "BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop"
 
 [programs.devnet]
-ephemeral_rollups = "BaFPZGCJ2kKRyEgJPUcW7kBWTmRLgYtpUYYVrFHvBJDF"
+ephemeral_rollups = "BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop"
 
 [registry]
 url = "https://api.apr.dev"

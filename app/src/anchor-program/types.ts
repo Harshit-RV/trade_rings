@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/ephemeral_rollups.json`.
  */
 export type EphemeralRollups = {
-  "address": "BaFPZGCJ2kKRyEgJPUcW7kBWTmRLgYtpUYYVrFHvBJDF",
+  "address": "BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop",
   "metadata": {
     "name": "ephemeralRollups",
     "version": "0.1.0",

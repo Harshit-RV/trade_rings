@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("BaFPZGCJ2kKRyEgJPUcW7kBWTmRLgYtpUYYVrFHvBJDF");
+declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
 
 #[program]
 pub mod ephemeral_rollups {
@@ -26,6 +26,7 @@ pub mod ephemeral_rollups {
 
         arena_account.bump = ctx.bumps.arena_account;
         arena_account.creator = *ctx.accounts.signer.key;
+        ctx.accounts.signer_profile_account.arenas_created_count += 1;
 
         Ok(())
     }
