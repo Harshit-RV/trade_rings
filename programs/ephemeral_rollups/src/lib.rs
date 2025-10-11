@@ -81,6 +81,7 @@ pub struct CreateUserProfile<'info> {
 #[account]
 #[derive(InitSpace)]
 pub struct ArenaAccount {
+    // TODO: should we add a field that stores the public key of this PDA inside the data?
     creator: Pubkey,
     bump: u8,
 }
