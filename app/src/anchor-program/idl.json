@@ -8,16 +8,16 @@
   },
   "instructions": [
     {
-      "name": "create_arena",
+      "name": "admin_fn_create_arena",
       "discriminator": [
-        174,
-        236,
-        45,
-        61,
-        197,
-        215,
-        149,
-        169
+        186,
+        53,
+        47,
+        32,
+        27,
+        232,
+        72,
+        25
       ],
       "accounts": [
         {
@@ -105,16 +105,16 @@
       "args": []
     },
     {
-      "name": "create_profile",
+      "name": "admin_fn_create_profile",
       "discriminator": [
-        225,
         205,
-        234,
-        143,
-        17,
-        186,
-        50,
-        220
+        137,
+        116,
+        10,
+        204,
+        83,
+        183,
+        209
       ],
       "accounts": [
         {
@@ -170,6 +170,201 @@
           "type": "string"
         }
       ]
+    },
+    {
+      "name": "close_all_positions",
+      "discriminator": [
+        199,
+        114,
+        100,
+        82,
+        76,
+        226,
+        236,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "open_position_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  112,
+                  101,
+                  110,
+                  95,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "trading_account_for_arena"
+              },
+              {
+                "kind": "account",
+                "path": "trading_account_for_arena.open_positions_count",
+                "account": "TradingAccountForArena"
+              }
+            ]
+          }
+        },
+        {
+          "name": "trading_account_for_arena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  102,
+                  111,
+                  114,
+                  95,
+                  97,
+                  114,
+                  101,
+                  110,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "arena_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "arena_account"
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_position",
+      "discriminator": [
+        123,
+        134,
+        81,
+        0,
+        49,
+        68,
+        98,
+        98
+      ],
+      "accounts": [
+        {
+          "name": "open_position_account",
+          "writable": true
+        },
+        {
+          "name": "trading_account_for_arena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  102,
+                  111,
+                  114,
+                  95,
+                  97,
+                  114,
+                  101,
+                  110,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "arena_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "arena_account"
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
     },
     {
       "name": "create_trading_account_for_arena",
@@ -246,31 +441,39 @@
       "args": []
     },
     {
-      "name": "trade_in_arena",
+      "name": "open_position",
       "discriminator": [
-        78,
-        219,
-        32,
-        54,
-        234,
-        242,
-        61,
-        237
+        135,
+        128,
+        47,
+        77,
+        15,
+        152,
+        240,
+        49
       ],
       "accounts": [
         {
-          "name": "trade_account",
+          "name": "open_position_account",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  116,
-                  114,
-                  97,
-                  100,
+                  111,
+                  112,
                   101,
+                  110,
+                  95,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110,
                   95,
                   97,
                   99,
@@ -291,7 +494,7 @@
               },
               {
                 "kind": "account",
-                "path": "trading_account_for_arena.trade_count",
+                "path": "trading_account_for_arena.open_positions_count",
                 "account": "TradingAccountForArena"
               }
             ]
@@ -356,7 +559,95 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "asset",
+          "type": "string"
+        },
+        {
+          "name": "quantity",
+          "type": "i32"
+        }
+      ]
+    },
+    {
+      "name": "update_position",
+      "discriminator": [
+        102,
+        75,
+        42,
+        126,
+        57,
+        196,
+        156,
+        9
+      ],
+      "accounts": [
+        {
+          "name": "open_position_account",
+          "writable": true
+        },
+        {
+          "name": "trading_account_for_arena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  102,
+                  111,
+                  114,
+                  95,
+                  97,
+                  114,
+                  101,
+                  110,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "arena_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "arena_account"
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "quantity",
+          "type": "i32"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -374,16 +665,16 @@
       ]
     },
     {
-      "name": "TradeAccount",
+      "name": "OpenPositionAccount",
       "discriminator": [
-        46,
-        97,
-        187,
-        111,
-        38,
-        69,
-        11,
-        236
+        199,
+        227,
+        20,
+        81,
+        238,
+        230,
+        138,
+        29
       ]
     },
     {
@@ -428,6 +719,21 @@
       "code": 6002,
       "name": "NameTooLong",
       "msg": "Name must be 10 characters or smaller"
+    },
+    {
+      "code": 6003,
+      "name": "AssetNameTooLong",
+      "msg": "Asset name must be 10 characters or smaller"
+    },
+    {
+      "code": 6004,
+      "name": "InsufficientFunds",
+      "msg": "Your account does not have enough funds to execute this transactions."
+    },
+    {
+      "code": 6005,
+      "name": "ShortingUnsupported",
+      "msg": "Shorting an asset is not supported as of now."
     }
   ],
   "types": [
@@ -448,13 +754,17 @@
       }
     },
     {
-      "name": "TradeAccount",
+      "name": "OpenPositionAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "pubkey",
-            "type": "pubkey"
+            "name": "asset",
+            "type": "string"
+          },
+          {
+            "name": "quantity",
+            "type": "i32"
           },
           {
             "name": "bump",
@@ -469,12 +779,16 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "pubkey",
+            "name": "authority",
             "type": "pubkey"
           },
           {
-            "name": "trade_count",
+            "name": "open_positions_count",
             "type": "u8"
+          },
+          {
+            "name": "usdc_balance",
+            "type": "i32"
           },
           {
             "name": "bump",

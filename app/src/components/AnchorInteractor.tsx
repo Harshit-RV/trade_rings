@@ -21,15 +21,30 @@ interface ArenaAccount {
 
 interface TradingAccountForArena {
   selfkey: PublicKey;
-  pubkey: PublicKey;
-  tradeCount: number;
+  authority: PublicKey;
+  openPositionsCount: number;
+  usdcBalance: number;
   bump: number;
 }
 
-interface TradeAccount {
-  pubkey: PublicKey;
+interface OpenPositionAccount {
+  selfkey: PublicKey;
+  asset: string;
+  quantity: number;
   bump: number;
 }
+
+type UpdatePositionAccounts = {
+  openPositionAccount: PublicKey;
+  tradingAccountForArena: PublicKey;
+  arenaAccount: PublicKey;
+};
+
+type ClosePositionAccounts = {
+  openPositionAccount: PublicKey;
+  tradingAccountForArena: PublicKey;
+  arenaAccount: PublicKey;
+};
 
 const AnchorInteractor = () => {
   const { connection } = useConnection();
@@ -40,10 +55,14 @@ const AnchorInteractor = () => {
   const [userArenas, setUserArenas] = useState<ArenaAccount[]>([]);
   const [allArenas, setAllArenas] = useState<ArenaAccount[]>([]);
   const [tradingAccounts, setTradingAccounts] = useState<Map<string, TradingAccountForArena>>(new Map());
-  const [trades, setTrades] = useState<Map<string, TradeAccount[]>>(new Map());
+  const [openPositions, setOpenPositions] = useState<Map<string, OpenPositionAccount[]>>(new Map());
   const [loading, setLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [expandedArenas, setExpandedArenas] = useState<Set<string>>(new Set());
+  const [profileNameInput, setProfileNameInput] = useState("");
+  const [newPositionAsset, setNewPositionAsset] = useState<Record<string, string>>({});
+  const [newPositionQty, setNewPositionQty] = useState<Record<string, number>>({});
+  const [updateQty, setUpdateQty] = useState<Record<string, number>>({});
   
   // Memoize provider and program to avoid recreating on every render
   const provider = useMemo(() => {
@@ -166,7 +185,7 @@ const AnchorInteractor = () => {
     setLoading(true);
     try {
       const transaction = await program.methods
-        .createProfile(name)
+        .adminFnCreateProfile(name)
         .transaction();
 
       transaction.feePayer = wallet.publicKey;
@@ -193,7 +212,7 @@ const AnchorInteractor = () => {
     setLoading(true);
     try {
       const transaction = await program.methods
-        .createArena()
+        .adminFnCreateArena()
         .transaction();
 
       transaction.feePayer = wallet.publicKey;
@@ -271,7 +290,7 @@ const AnchorInteractor = () => {
         selfkey: pda,
       })));
 
-      fetchTradesForTradingAccountInArena({
+      fetchOpenPositionsForTradingAccount({
         ...tradingAccount,
         selfkey: pda,
       })
@@ -286,17 +305,19 @@ const AnchorInteractor = () => {
     }
   };
 
-  // Create trade in arena
-  const createTradeInArena = async (arenaPubkey: PublicKey) => {
+  // Open position in arena
+  const openPositionInArena = async (arenaPubkey: PublicKey) => {
     if (!program || !wallet) return;
     
     setLoading(true);
     try {
+      const arenaKey = arenaPubkey.toString();
+      const asset = newPositionAsset[arenaKey] || "";
+      const qty = newPositionQty[arenaKey] ?? 0;
+
       const transaction = await program.methods
-        .tradeInArena()
-        .accounts({
-          arenaAccount: arenaPubkey
-        })
+        .openPosition(asset, qty)
+        .accounts({ arenaAccount: arenaPubkey })
         .transaction();
 
       transaction.feePayer = wallet.publicKey;
@@ -305,35 +326,32 @@ const AnchorInteractor = () => {
       const signedTx = await wallet.signTransaction(transaction);
       const txSig = await connection.sendRawTransaction(signedTx.serialize());
 
-      console.log(`Trade created: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+      console.log(`Position opened: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
       
-      // Refresh trading account and trades
+      // Refresh trading account and positions
       await fetchTradingAccountForArena(arenaPubkey);
-      // TODO: fetch trades for trading account and arena
     } catch (error) {
-      console.error("Error creating trade:", error);
+      console.error("Error opening position:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch trades for specific arena
-  const fetchTradesForTradingAccountInArena = async (tradingAccount: TradingAccountForArena) => {
+  // Fetch open positions for specific trading account
+  const fetchOpenPositionsForTradingAccount = async (tradingAccount: TradingAccountForArena) => {
     if (!program || !wallet) return;
+    console.log("running fetchOpenPositionsForTradingAccount")
     
     try {
-      // const tradingAccount = tradingAccounts.get(tradingAccountKey.toString());
-      // if (!tradingAccount) return;
-
-      const trades: TradeAccount[] = [];
+      const positions: OpenPositionAccount[] = [];
       
-      for (let i = 0; i < tradingAccount.tradeCount; i++) {
+      for (let i = 0; i < tradingAccount.openPositionsCount; i++) {
         try {
           const countLE = new BN(i).toArrayLike(Buffer, "le", 1);
 
           const [pda] = PublicKey.findProgramAddressSync(
             [
-              Buffer.from("trade_account"),
+              Buffer.from("open_position_account"),
               wallet.publicKey.toBuffer(),
               tradingAccount.selfkey.toBuffer(),
               countLE
@@ -341,16 +359,73 @@ const AnchorInteractor = () => {
             new PublicKey(idl.address),
           );
 
-          const tradeAccount = await program.account.tradeAccount.fetch(pda);
-          trades.push(tradeAccount as TradeAccount);
+          const pos = await program.account.openPositionAccount.fetch(pda);
+          console.log(pos)
+          positions.push({ ...(pos as unknown as { asset: string; quantity: number; bump: number }), selfkey: pda } as OpenPositionAccount);
         } catch (error) {
-          console.error(`Error fetching trade ${i}:`, error);
+          console.error(`Error fetching open position ${i}:`, error);
         }
       }
       
-      setTrades(prev => new Map(prev.set(tradingAccount.selfkey.toString(), trades)));
+      setOpenPositions(prev => new Map(prev.set(tradingAccount.selfkey.toString(), positions)));
     } catch (error) {
-      console.error("Error fetching trades:", error);
+      console.error("Error fetching open positions:", error);
+    }
+  };
+
+  const updatePositionQuantity = async (arenaPubkey: PublicKey, tradingAccount: TradingAccountForArena, position: OpenPositionAccount, deltaQty: number) => {
+    if (!program || !wallet) return;
+    setLoading(true);
+    try {
+      const transaction = await program.methods
+        .updatePosition(deltaQty)
+        .accounts({
+          openPositionAccount: position.selfkey,
+          tradingAccountForArena: tradingAccount.selfkey,
+          arenaAccount: arenaPubkey,
+        } as UpdatePositionAccounts)
+        .transaction();
+
+      transaction.feePayer = wallet.publicKey;
+      transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      const signedTx = await wallet.signTransaction(transaction);
+      const txSig = await connection.sendRawTransaction(signedTx.serialize());
+      console.log(`Position updated: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+
+      await fetchTradingAccountForArena(arenaPubkey);
+    } catch (error) {
+      console.error("Error updating position:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const closePosition = async (arenaPubkey: PublicKey, tradingAccount: TradingAccountForArena, position: OpenPositionAccount) => {
+    if (!program || !wallet) return;
+    setLoading(true);
+    try {
+      const transaction = await program.methods
+        .closePosition()
+        .accounts({
+          openPositionAccount: position.selfkey,
+          tradingAccountForArena: tradingAccount.selfkey,
+          arenaAccount: arenaPubkey,
+        } as ClosePositionAccounts)
+        .transaction();
+
+      transaction.feePayer = wallet.publicKey;
+      transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      const signedTx = await wallet.signTransaction(transaction);
+      const txSig = await connection.sendRawTransaction(signedTx.serialize());
+      console.log(`Position closed: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+
+      await fetchTradingAccountForArena(arenaPubkey);
+    } catch (error) {
+      console.error("Error closing position:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -408,13 +483,21 @@ const AnchorInteractor = () => {
           ) : (
             <div>
               <p className="mb-4 text-gray-600">No profile found. Create one to start creating arenas.</p>
-              <Button 
-                onClick={() => createProfile("Harshit")} 
-                disabled={loading}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-              >
-                {loading ? "Creating..." : "Create Profile"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <input
+                  placeholder="Your name (<=10 chars)"
+                  value={profileNameInput}
+                  onChange={(e) => setProfileNameInput(e.target.value)}
+                  className="border rounded px-3 py-2 text-sm"
+                />
+                <Button 
+                  onClick={() => createProfile(profileNameInput || "Anon")} 
+                  disabled={loading}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                >
+                  {loading ? "Creating..." : "Create Profile"}
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -465,6 +548,7 @@ const AnchorInteractor = () => {
                 const arenaKey = arena.selfkey.toString();
                 const isExpanded = expandedArenas.has(arenaKey);
                 const tradingAccount = tradingAccounts.get(arenaKey);
+                // console.log(tradingAccounts)
                 
                 return (
                   <div key={arenaKey} className="border rounded-lg">
@@ -500,13 +584,28 @@ const AnchorInteractor = () => {
                                 <pre className="bg-white p-3 rounded text-sm overflow-auto mb-3">
                                   {JSON.stringify(tradingAccount, null, 2)}
                                 </pre>
-                                <Button 
-                                  onClick={() => createTradeInArena(arena.selfkey)} 
-                                  disabled={loading}
-                                  className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm"
-                                >
-                                  {loading ? "Creating..." : "Create Trade"}
-                                </Button>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <input
+                                    placeholder="Asset (<=10 chars)"
+                                    value={newPositionAsset[arenaKey] || ""}
+                                    onChange={(e) => setNewPositionAsset(prev => ({ ...prev, [arenaKey]: e.target.value }))}
+                                    className="border rounded px-2 py-1 text-sm"
+                                  />
+                                  <input
+                                    placeholder="Quantity"
+                                    type="number"
+                                    value={newPositionQty[arenaKey] ?? 0}
+                                    onChange={(e) => setNewPositionQty(prev => ({ ...prev, [arenaKey]: Number(e.target.value) }))}
+                                    className="border rounded px-2 py-1 text-sm w-28"
+                                  />
+                                  <Button 
+                                    onClick={() => openPositionInArena(arena.selfkey)} 
+                                    disabled={loading}
+                                    className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm"
+                                  >
+                                    {loading ? "Opening..." : "Open Position"}
+                                  </Button>
+                                </div>
                               </div>
                             ) : (
                               <div>
@@ -522,23 +621,49 @@ const AnchorInteractor = () => {
                             )}
                           </div>
 
-                          {/* Trades Section */}
+                          {/* Open Positions Section */}
                           {tradingAccount && (
                             <div>
-                              <h4 className="font-medium mb-2">Trades ({trades.get(tradingAccount.selfkey.toString())?.length || 0})</h4>
+                              <h4 className="font-medium mb-2">Open Positions ({openPositions.get(tradingAccount.selfkey.toString())?.length || 0})</h4>
                               <Button 
-                                onClick={() => fetchTradesForTradingAccountInArena(tradingAccount)} 
+                                onClick={() => fetchOpenPositionsForTradingAccount(tradingAccount)} 
                                 className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm mb-2"
                               >
-                                Load Trades
+                                Load Positions
                               </Button>
-                              {trades.get(tradingAccount.selfkey.toString()) && trades.get(tradingAccount.selfkey.toString())!.length > 0 && (
+                              {openPositions.get(tradingAccount.selfkey.toString()) && openPositions.get(tradingAccount.selfkey.toString())!.length > 0 && (
                                 <div className="space-y-2">
-                                  {trades.get(tradingAccount.selfkey.toString())!.map((trade, tradeIndex) => (
-                                    <div key={tradeIndex} className="p-2 bg-white rounded border">
-                                      <p className="text-sm">Trade #{tradeIndex + 1}</p>
-                                      <p className="text-xs text-gray-600">Pubkey: {trade.pubkey.toString()}</p>
-                                      <p className="text-xs text-gray-600">Bump: {trade.bump}</p>
+                                  {openPositions.get(tradingAccount.selfkey.toString())!.map((pos, posIndex) => (
+                                    <div key={posIndex} className="p-3 bg-white rounded border space-y-2">
+                                      <div className="flex flex-col text-sm">
+                                        <span className="font-medium">Position #{posIndex + 1}</span>
+                                        <span className="text-gray-600">Asset: {pos.asset}</span>
+                                        <span className="text-gray-600">Quantity: {pos.quantity}</span>
+                                        <span className="text-gray-600">Pubkey: {pos.selfkey.toString()}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          placeholder="Delta Qty"
+                                          type="number"
+                                          value={updateQty[pos.selfkey.toString()] ?? 0}
+                                          onChange={(e) => setUpdateQty(prev => ({ ...prev, [pos.selfkey.toString()]: Number(e.target.value) }))}
+                                          className="border rounded px-2 py-1 text-sm w-28"
+                                        />
+                                        <Button
+                                          onClick={() => updatePositionQuantity(arena.selfkey, tradingAccount, pos, updateQty[pos.selfkey.toString()] ?? 0)}
+                                          disabled={loading}
+                                          className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded text-sm"
+                                        >
+                                          {loading ? "Updating..." : "Update Quantity"}
+                                        </Button>
+                                        <Button
+                                          onClick={() => closePosition(arena.selfkey, tradingAccount, pos)}
+                                          disabled={loading}
+                                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                                        >
+                                          {loading ? "Closing..." : "Close Position"}
+                                        </Button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>

@@ -14,16 +14,16 @@ export type EphemeralRollups = {
   },
   "instructions": [
     {
-      "name": "createArena",
+      "name": "adminFnCreateArena",
       "discriminator": [
-        174,
-        236,
-        45,
-        61,
-        197,
-        215,
-        149,
-        169
+        186,
+        53,
+        47,
+        32,
+        27,
+        232,
+        72,
+        25
       ],
       "accounts": [
         {
@@ -111,16 +111,16 @@ export type EphemeralRollups = {
       "args": []
     },
     {
-      "name": "createProfile",
+      "name": "adminFnCreateProfile",
       "discriminator": [
-        225,
         205,
-        234,
-        143,
-        17,
-        186,
-        50,
-        220
+        137,
+        116,
+        10,
+        204,
+        83,
+        183,
+        209
       ],
       "accounts": [
         {
@@ -176,6 +176,201 @@ export type EphemeralRollups = {
           "type": "string"
         }
       ]
+    },
+    {
+      "name": "closeAllPositions",
+      "discriminator": [
+        199,
+        114,
+        100,
+        82,
+        76,
+        226,
+        236,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "openPositionAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  112,
+                  101,
+                  110,
+                  95,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "tradingAccountForArena"
+              },
+              {
+                "kind": "account",
+                "path": "trading_account_for_arena.open_positions_count",
+                "account": "tradingAccountForArena"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tradingAccountForArena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  102,
+                  111,
+                  114,
+                  95,
+                  97,
+                  114,
+                  101,
+                  110,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "arenaAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "arenaAccount"
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "closePosition",
+      "discriminator": [
+        123,
+        134,
+        81,
+        0,
+        49,
+        68,
+        98,
+        98
+      ],
+      "accounts": [
+        {
+          "name": "openPositionAccount",
+          "writable": true
+        },
+        {
+          "name": "tradingAccountForArena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  102,
+                  111,
+                  114,
+                  95,
+                  97,
+                  114,
+                  101,
+                  110,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "arenaAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "arenaAccount"
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
     },
     {
       "name": "createTradingAccountForArena",
@@ -252,31 +447,39 @@ export type EphemeralRollups = {
       "args": []
     },
     {
-      "name": "tradeInArena",
+      "name": "openPosition",
       "discriminator": [
-        78,
-        219,
-        32,
-        54,
-        234,
-        242,
-        61,
-        237
+        135,
+        128,
+        47,
+        77,
+        15,
+        152,
+        240,
+        49
       ],
       "accounts": [
         {
-          "name": "tradeAccount",
+          "name": "openPositionAccount",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  116,
-                  114,
-                  97,
-                  100,
+                  111,
+                  112,
                   101,
+                  110,
+                  95,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110,
                   95,
                   97,
                   99,
@@ -297,7 +500,7 @@ export type EphemeralRollups = {
               },
               {
                 "kind": "account",
-                "path": "trading_account_for_arena.trade_count",
+                "path": "trading_account_for_arena.open_positions_count",
                 "account": "tradingAccountForArena"
               }
             ]
@@ -362,7 +565,95 @@ export type EphemeralRollups = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "asset",
+          "type": "string"
+        },
+        {
+          "name": "quantity",
+          "type": "i32"
+        }
+      ]
+    },
+    {
+      "name": "updatePosition",
+      "discriminator": [
+        102,
+        75,
+        42,
+        126,
+        57,
+        196,
+        156,
+        9
+      ],
+      "accounts": [
+        {
+          "name": "openPositionAccount",
+          "writable": true
+        },
+        {
+          "name": "tradingAccountForArena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  102,
+                  111,
+                  114,
+                  95,
+                  97,
+                  114,
+                  101,
+                  110,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "arenaAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "arenaAccount"
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "quantity",
+          "type": "i32"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -380,16 +671,16 @@ export type EphemeralRollups = {
       ]
     },
     {
-      "name": "tradeAccount",
+      "name": "openPositionAccount",
       "discriminator": [
-        46,
-        97,
-        187,
-        111,
-        38,
-        69,
-        11,
-        236
+        199,
+        227,
+        20,
+        81,
+        238,
+        230,
+        138,
+        29
       ]
     },
     {
@@ -434,6 +725,21 @@ export type EphemeralRollups = {
       "code": 6002,
       "name": "nameTooLong",
       "msg": "Name must be 10 characters or smaller"
+    },
+    {
+      "code": 6003,
+      "name": "assetNameTooLong",
+      "msg": "Asset name must be 10 characters or smaller"
+    },
+    {
+      "code": 6004,
+      "name": "insufficientFunds",
+      "msg": "Your account does not have enough funds to execute this transactions."
+    },
+    {
+      "code": 6005,
+      "name": "shortingUnsupported",
+      "msg": "Shorting an asset is not supported as of now."
     }
   ],
   "types": [
@@ -454,13 +760,17 @@ export type EphemeralRollups = {
       }
     },
     {
-      "name": "tradeAccount",
+      "name": "openPositionAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "pubkey",
-            "type": "pubkey"
+            "name": "asset",
+            "type": "string"
+          },
+          {
+            "name": "quantity",
+            "type": "i32"
           },
           {
             "name": "bump",
@@ -475,12 +785,16 @@ export type EphemeralRollups = {
         "kind": "struct",
         "fields": [
           {
-            "name": "pubkey",
+            "name": "authority",
             "type": "pubkey"
           },
           {
-            "name": "tradeCount",
+            "name": "openPositionsCount",
             "type": "u8"
+          },
+          {
+            "name": "usdcBalance",
+            "type": "i32"
           },
           {
             "name": "bump",
