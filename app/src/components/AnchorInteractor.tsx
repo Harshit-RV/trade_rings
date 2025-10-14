@@ -5,6 +5,7 @@ import idl from "../anchor-program/idl.json";
 import Button from "../ui/button";
 import { PublicKey } from "@solana/web3.js";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import toast from "react-hot-toast";
 
 interface UserProfile {
   pubkey: PublicKey;
@@ -195,6 +196,7 @@ const AnchorInteractor = () => {
       const txSig = await connection.sendRawTransaction(signedTx.serialize());
 
       console.log(`Profile created: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+      toast.success(`Profile created`);
       
       // Refresh profile after creation
       await fetchUserProfile();
@@ -222,6 +224,7 @@ const AnchorInteractor = () => {
       const txSig = await connection.sendRawTransaction(signedTx.serialize());
 
       console.log(`Arena created: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+      toast.success(`Arena created`);
       
       // Refresh profile and arenas
       await fetchUserProfile();
@@ -253,6 +256,7 @@ const AnchorInteractor = () => {
       const txSig = await connection.sendRawTransaction(signedTx.serialize());
 
       console.log(`Trading account created: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+      toast.success(`Trading account created`);
       
       // Refresh trading accounts
       await fetchTradingAccountForArena(arenaPubkey);
@@ -327,6 +331,7 @@ const AnchorInteractor = () => {
       const txSig = await connection.sendRawTransaction(signedTx.serialize());
 
       console.log(`Position opened: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+      toast.success(`Position opened`);
       
       // Refresh trading account and positions
       await fetchTradingAccountForArena(arenaPubkey);
@@ -340,7 +345,6 @@ const AnchorInteractor = () => {
   // Fetch open positions for specific trading account
   const fetchOpenPositionsForTradingAccount = async (tradingAccount: TradingAccountForArena) => {
     if (!program || !wallet) return;
-    console.log("running fetchOpenPositionsForTradingAccount")
     
     try {
       const positions: OpenPositionAccount[] = [];
@@ -392,6 +396,7 @@ const AnchorInteractor = () => {
       const signedTx = await wallet.signTransaction(transaction);
       const txSig = await connection.sendRawTransaction(signedTx.serialize());
       console.log(`Position updated: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+      toast.success(`Position updated`);
 
       await fetchTradingAccountForArena(arenaPubkey);
     } catch (error) {
@@ -420,6 +425,7 @@ const AnchorInteractor = () => {
       const signedTx = await wallet.signTransaction(transaction);
       const txSig = await connection.sendRawTransaction(signedTx.serialize());
       console.log(`Position closed: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+      toast.success(`Position closed`);
 
       await fetchTradingAccountForArena(arenaPubkey);
     } catch (error) {
