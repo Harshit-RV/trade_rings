@@ -264,13 +264,13 @@ const AnchorInteractor = () => {
   };
 
   // Fetch trading account for specific arena
-  const fetchTradingAccountForArena = async (arenaPubkey: PublicKey) => {
+  const fetchTradingAccountForArena = async (arenaPubkey: PublicKey, force = false) => {
     if (!program || !wallet) return null;
     
     const arenaKey = arenaPubkey.toString();
     
     // Don't fetch if we already have it
-    if (tradingAccounts.has(arenaKey)) {
+    if (!force && tradingAccounts.has(arenaKey)) {
       return tradingAccounts.get(arenaKey);
     }
     
@@ -469,7 +469,7 @@ const AnchorInteractor = () => {
       
       {/* Section 1: Create Arenas */}
       <div className="mb-12">
-        <h2 className="text-2xl font-semibold mb-6 border-b pb-2">1. Create Arenas</h2>
+        <h2 className="text-2xl font-semibold mb-6 border-b pb-2">1. Create Arenas [admin only]</h2>adm
         
         {/* Profile Section */}
         <div className="mb-6 p-4 border rounded-lg">
@@ -562,6 +562,15 @@ const AnchorInteractor = () => {
                         <p className="text-sm text-gray-600">Creator: {arena.creator.toString()}</p>
                       </div>
                       <div className="flex items-center space-x-2">
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <Button 
+                            onClick={() => fetchTradingAccountForArena(arena.selfkey, true)}
+                            disabled={loading}
+                            className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs"
+                          >
+                            {loading ? "Refreshing..." : "Refresh"}
+                          </Button>
+                        </span>
                         {tradingAccount && (
                           <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
                             Trading Account Active
@@ -578,7 +587,16 @@ const AnchorInteractor = () => {
                         <div className="space-y-4">
                           {/* Trading Account Section */}
                           <div>
-                            <h4 className="font-medium mb-2">Trading Account</h4>
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-medium">Trading Account</h4>
+                              <Button 
+                                onClick={() => fetchTradingAccountForArena(arena.selfkey, true)}
+                                disabled={loading}
+                                className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs"
+                              >
+                                {loading ? "Refreshing..." : "Refresh"}
+                              </Button>
+                            </div>
                             {tradingAccount ? (
                               <div>
                                 <pre className="bg-white p-3 rounded text-sm overflow-auto mb-3">
@@ -626,10 +644,10 @@ const AnchorInteractor = () => {
                             <div>
                               <h4 className="font-medium mb-2">Open Positions ({openPositions.get(tradingAccount.selfkey.toString())?.length || 0})</h4>
                               <Button 
-                                onClick={() => fetchOpenPositionsForTradingAccount(tradingAccount)} 
+                                onClick={() => fetchTradingAccountForArena(arena.selfkey, true)} 
                                 className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm mb-2"
                               >
-                                Load Positions
+                                Refresh Positions
                               </Button>
                               {openPositions.get(tradingAccount.selfkey.toString()) && openPositions.get(tradingAccount.selfkey.toString())!.length > 0 && (
                                 <div className="space-y-2">
