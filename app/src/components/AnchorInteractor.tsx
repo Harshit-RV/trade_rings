@@ -321,7 +321,10 @@ const AnchorInteractor = () => {
 
       const transaction = await program.methods
         .openPosition(asset, qty)
-        .accounts({ arenaAccount: arenaPubkey })
+        .accounts({
+          arenaAccount: arenaPubkey,
+          priceUpdate: "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
+        })
         .transaction();
 
       transaction.feePayer = wallet.publicKey;

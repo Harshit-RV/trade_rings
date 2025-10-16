@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2};
 
 declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
 
@@ -50,16 +51,25 @@ pub mod ephemeral_rollups {
 
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
         let open_pos =  &mut ctx.accounts.open_position_account;
+
+        let latest_price = ctx.accounts.price_update.price_message;
+
+        // TODO: figure out proper types for all vars
+        let current_price_f64 = (latest_price.price as f64) * 10f64.powi(latest_price.exponent);
+
+        let current_price = current_price_f64.round()
+            .clamp(i32::MIN as f64, i32::MAX as f64) // avoid overflow
+            as i32;
+
+        msg!("Price from Pyth: price: {}, confidence: {}, exponent: {}, publish time: {}", latest_price.price, latest_price.conf, latest_price.exponent, latest_price.publish_time );
         
         open_pos.bump = ctx.bumps.open_position_account;
         trading_account.open_positions_count += 1;
         
-        let price  =  100; // TODO: get current price of asset using Oracle price feeds.
-
-        require!(quantity * price <= trading_account.usdc_balance, EphemeralRollupError::InsufficientFunds);
+        require!(quantity * current_price <= trading_account.usdc_balance, EphemeralRollupError::InsufficientFunds);
         require!(quantity >= 0, EphemeralRollupError::ShortingUnsupported);
 
-        trading_account.usdc_balance -= quantity * price;
+        trading_account.usdc_balance -= quantity * current_price;
         open_pos.asset = asset;
         open_pos.quantity = quantity;
         
@@ -216,6 +226,8 @@ pub struct OpenPosition<'info> {
         bump
     )]
     pub open_position_account: Account<'info, OpenPositionAccount>,
+
+    pub price_update: Account<'info, PriceUpdateV2>,
 
     #[account(
         mut,
