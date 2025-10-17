@@ -580,8 +580,8 @@ export type EphemeralRollups = {
           "type": "string"
         },
         {
-          "name": "quantity",
-          "type": "i32"
+          "name": "quantityScaled",
+          "type": "i64"
         }
       ]
     },
@@ -662,8 +662,8 @@ export type EphemeralRollups = {
       ],
       "args": [
         {
-          "name": "quantity",
-          "type": "i32"
+          "name": "quantityScaled",
+          "type": "i64"
         }
       ]
     }
@@ -794,8 +794,8 @@ export type EphemeralRollups = {
             "type": "string"
           },
           {
-            "name": "quantity",
-            "type": "i32"
+            "name": "quantityRaw",
+            "type": "u64"
           },
           {
             "name": "bump",

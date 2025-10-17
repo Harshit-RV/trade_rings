@@ -574,8 +574,8 @@
           "type": "string"
         },
         {
-          "name": "quantity",
-          "type": "i32"
+          "name": "quantity_scaled",
+          "type": "i64"
         }
       ]
     },
@@ -656,8 +656,8 @@
       ],
       "args": [
         {
-          "name": "quantity",
-          "type": "i32"
+          "name": "quantity_scaled",
+          "type": "i64"
         }
       ]
     }
@@ -788,8 +788,8 @@
             "type": "string"
           },
           {
-            "name": "quantity",
-            "type": "i32"
+            "name": "quantity_raw",
+            "type": "u64"
           },
           {
             "name": "bump",
