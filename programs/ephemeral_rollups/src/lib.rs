@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+pub mod errors;
 use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2};
 
 declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
@@ -17,7 +18,9 @@ fn get_total_cost(price: i64, exponent: i32, quantity_scaled: i64) -> i128 {
 
 #[program]
 pub mod ephemeral_rollups {
+    use crate::errors::EphemeralRollupError;
     use super::*;
+    
     // admin_fn -> admin functions
 
     // only needed to create arenas
@@ -297,21 +300,4 @@ pub struct ClosePosition<'info> {
 
     #[account(mut)]
     pub signer: Signer<'info>,
-}
-
-
-#[error_code]
-pub enum EphemeralRollupError {
-    #[msg("You are not authorised to perform this function")]
-    Unauthorised,
-    #[msg("You must create a profile first by calling create_profile method")]
-    UnknownUser,
-    #[msg("Name must be 10 characters or smaller")]
-    NameTooLong,
-    #[msg("Asset name must be 10 characters or smaller")]
-    AssetNameTooLong,
-    #[msg("Your account does not have enough funds to execute this transactions.")]
-    InsufficientFunds,
-    #[msg("Shorting an asset is not supported as of now.")]
-    ShortingUnsupported,
 }
