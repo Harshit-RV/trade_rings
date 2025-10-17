@@ -109,9 +109,7 @@ const getArenaAccounts = async (count: number, payer: anchor.web3.Keypair, progr
         selfkey: pda,
       } as ArenaAccount);
       
-    } catch (error) {
-      console.error(`Error fetching arena ${i}:`, error);
-    }
+    } catch (_) {}
   }
 
   return arenas
@@ -147,9 +145,7 @@ const getPositionAccountsForArena = async (count: number, payer: anchor.web3.Key
       const pos = await program.account.openPositionAccount.fetch(pda);
 
       positions.push({ ...pos, selfkey: pda } as OpenPositionAccount);
-    } catch (error) {
-      console.error(`Error fetching open position ${i}:`, error);
-    }
+    } catch (_) {}
   }
 
   return positions
@@ -170,6 +166,11 @@ describe("unit tests", async () => {
     [Buffer.from("user_profile_account"), payer.publicKey.toBuffer()],
     program.programId
   );
+
+  const QUANTITY_SCALING_FACTOR = 1_000_000;
+  const assetPrice = 1000;
+  const MICROUSDC_PER_USDC = 1_000_000;
+  const INITIAL_BALANCE = 1_000_000;
 
   describe("profile creation", async () => {
     it("Should create a user profile successfully", async () => {
@@ -282,10 +283,10 @@ describe("unit tests", async () => {
         program.programId,
       );
 
-      const priceAccount = createMockPriceUpdateAccount(svm, 1000*100_000_000, -8); // $1000.00 with exponent -8
+      const priceAccount = createMockPriceUpdateAccount(svm, assetPrice * 100_000_000, -8); // $1000.00 with exponent -8
 
       const asset = "BTC";
-      const qty = new BN(1 * 1_000_000); // 1 units (scaled by 1e6)
+      const qty = new BN(1 * QUANTITY_SCALING_FACTOR); // 1 units (scaled by 1e6)
 
       await program.methods.openPosition(asset, qty)
         .accounts({
@@ -303,7 +304,7 @@ describe("unit tests", async () => {
       // new balance -> initial balance - (unit price of asset * actual quantity)
       // actual quantity = scaled quantity / sclaing factor
       // both initial balance and unit price must be in micro-USDC
-      const newBalance = 1_000_000_000_000 - (1_000_000 * 1000)
+      const newBalance = INITIAL_BALANCE * MICROUSDC_PER_USDC - (MICROUSDC_PER_USDC * assetPrice * 1)
       expect(Number(tradingAfter.microUsdcBalance)).to.equal(newBalance);
 
       const positions = await getPositionAccountsForArena(tradingAfter.openPositionsCount, payer, arena.selfkey, program);
@@ -355,152 +356,130 @@ describe("unit tests", async () => {
       }
     });
 
-    // TODO: investigate this, check why thrown error is AssertionError and not Transaction Error
     it("Should fail to open due to insufficient funds", async () => {
       const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
       const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
       const arena = arenaAccounts[0];
 
-      // Very high price to exceed balance
-      const priceAccount = createMockPriceUpdateAccount(svm, 10_000_000_000_000, -8);
+      const priceAccount = createMockPriceUpdateAccount(svm, assetPrice * 100_000_000, -8);
 
       try {
-        await program.methods.openPosition("SOL", new BN(1_000_000)) // 1.0 units
+        await program.methods.openPosition("SOL", new BN(1_000_000 * QUANTITY_SCALING_FACTOR))
           .accounts({ priceUpdate: priceAccount, arenaAccount: arena.selfkey, signer: payer.publicKey })
           .signers([payer])
           .rpc();
         expect.fail("Expected transaction to fail");
       } catch (error) {
-        // console.log(error)
-        // expect(error.message).to.include("Your account does not have enough funds to execute this transactions.");
+        console.log(error)
+        expect(error.message).to.include("Your account does not have enough funds to execute this transactions.");
       }
     });
 
-    // it("Should update a position and adjust balance both ways", async () => {
-    //   const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-    //   const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
-    //   const arena = arenaAccounts[arenaAccounts.length - 1];
+    it("Should update position: increase quantity and adjust balance", async () => {
+      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
+      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const arena = arenaAccounts[0];
 
-    //   // Ensure trading account exists
-    //   await program.methods.createTradingAccountForArena()
-    //     .accounts({ arenaAccount: arena.selfkey, signer: payer.publicKey })
-    //     .signers([payer])
-    //     .rpc();
+      const [ tradingPda ] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("trading_account_for_arena"), payer.publicKey.toBuffer(), arena.selfkey.toBuffer()],
+        program.programId,
+      );
+      const tradingAccountData = await program.account.tradingAccountForArena.fetch(tradingPda);
+      const priceAccount = createMockPriceUpdateAccount(svm, assetPrice * 100_000_000, -8); // $1000.00 with exponent -8
 
-    //   const [tradingPda] = anchor.web3.PublicKey.findProgramAddressSync(
-    //     [Buffer.from("trading_account_for_arena"), payer.publicKey.toBuffer(), arena.selfkey.toBuffer()],
-    //     program.programId,
-    //   );
-    //   const priceAccount = createMockPriceUpdateAccount(svm, 100_000_000, -8);
+      const positions = await getPositionAccountsForArena(tradingAccountData.openPositionsCount, payer, arena.selfkey, program);
+      const currPos = positions[0];
+      const currPosData = await program.account.openPositionAccount.fetch(currPos.selfkey);
 
-    //   // Open initial position
-    //   await program.methods.openPosition("BTC", new BN(50_000))
-    //     .accounts({ priceUpdate: priceAccount, arenaAccount: arena.selfkey, signer: payer.publicKey })
-    //     .signers([payer])
-    //     .rpc();
+      expect(Number(currPosData.quantityRaw)).to.equal(1 * QUANTITY_SCALING_FACTOR)
 
-    //   // Find open position PDA index 0
-    //   const trading = await program.account.tradingAccountForArena.fetch(tradingPda);
-    //   const [openPosPda] = anchor.web3.PublicKey.findProgramAddressSync(
-    //     [
-    //       Buffer.from("open_position_account"),
-    //       payer.publicKey.toBuffer(),
-    //       tradingPda.toBuffer(),
-    //       Buffer.from([trading.openPositionsCount - 1]),
-    //     ],
-    //     program.programId,
-    //   );
+      await program.methods.updatePosition(new BN(0.5 * QUANTITY_SCALING_FACTOR))
+        .accounts({
+          openPositionAccount: currPos.selfkey,
+          priceUpdate: priceAccount,
+          arenaAccount: arena.selfkey,
+          signer: payer.publicKey,
+        })
+        .signers([payer])
+        .rpc();
+      
+      const updatedCurrPosData = await program.account.openPositionAccount.fetch(currPos.selfkey);
+      const updatedTradingAccountData = await program.account.tradingAccountForArena.fetch(tradingPda);
+      
+      const newBalance = Number(tradingAccountData.microUsdcBalance) - (MICROUSDC_PER_USDC * assetPrice * 0.5)
+      expect(Number(updatedTradingAccountData.microUsdcBalance)).to.equal(newBalance)
+      expect(Number(updatedCurrPosData.quantityRaw)).to.equal(1.5 * QUANTITY_SCALING_FACTOR)
 
-    //   // Increase quantity
-    //   await program.methods.updatePosition(new BN(25_000))
-    //     .accounts({
-    //       openPositionAccount: openPosPda,
-    //       priceUpdate: priceAccount,
-    //       arenaAccount: arena.selfkey,
-    //       signer: payer.publicKey,
-    //     })
-    //     .signers([payer])
-    //     .rpc();
+      expect(Number(updatedCurrPosData.quantityRaw)).to.equal(1.5 * QUANTITY_SCALING_FACTOR);
+    });
 
-    //   // Decrease quantity
-    //   await program.methods.updatePosition(new BN(-10_000))
-    //     .accounts({
-    //       openPositionAccount: openPosPda,
-    //       priceUpdate: priceAccount,
-    //       arenaAccount: arena.selfkey,
-    //       signer: payer.publicKey,
-    //     })
-    //     .signers([payer])
-    //     .rpc();
+    it("Should fail when unauthorized payer tries to close a position", async () => {
+      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
+      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const arena = arenaAccounts[0];
 
-    //   const pos = await program.account.openPositionAccount.fetch(openPosPda);
-    //   expect(Number(pos.quantityRaw)).to.equal(65_000);
-    // });
+      const [ tradingPda ] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("trading_account_for_arena"), payer.publicKey.toBuffer(), arena.selfkey.toBuffer()],
+        program.programId,
+      );
 
-    // it("Should close a position and refund balance; block unauthorized", async () => {
-    //   const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-    //   const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
-    //   const arena = arenaAccounts[arenaAccounts.length - 1];
+      const priceAccount = createMockPriceUpdateAccount(svm, assetPrice * 100_000_000, -8);
+      const tradingPdaData = await program.account.tradingAccountForArena.fetch(tradingPda)
 
-    //   // Ensure trading account exists
-    //   await program.methods.createTradingAccountForArena()
-    //     .accounts({ arenaAccount: arena.selfkey, signer: payer.publicKey })
-    //     .signers([payer])
-    //     .rpc();
+      const positions = await getPositionAccountsForArena(tradingPdaData.openPositionsCount, payer, arena.selfkey, program);
+      const currPos = positions[0];
 
-    //   const [tradingPda] = anchor.web3.PublicKey.findProgramAddressSync(
-    //     [Buffer.from("trading_account_for_arena"), payer.publicKey.toBuffer(), arena.selfkey.toBuffer()],
-    //     program.programId,
-    //   );
-    //   const priceAccount = createMockPriceUpdateAccount(svm, 100_000_000, -8);
+      // Unauthorized attempt with different signer
+      const intruder = new Keypair();
+      svm.airdrop(intruder.publicKey, BigInt(LAMPORTS_PER_SOL));
 
-    //   await program.methods.openPosition("BTC", new BN(10_000))
-    //     .accounts({ priceUpdate: priceAccount, arenaAccount: arena.selfkey, signer: payer.publicKey })
-    //     .signers([payer])
-    //     .rpc();
+      try {
+        await program.methods.closePosition()
+          .accounts({
+            openPositionAccount: currPos.selfkey,
+            priceUpdate: priceAccount,
+            arenaAccount: arena.selfkey,
+            signer: intruder.publicKey,
+          })
+          .signers([intruder])
+          .rpc();
+        expect.fail("Expected unauthorized close to fail");
+      } catch (_) {}
+    })
 
-    //   const tradingBefore = await program.account.tradingAccountForArena.fetch(tradingPda);
-    //   const [openPosPda] = anchor.web3.PublicKey.findProgramAddressSync(
-    //     [
-    //       Buffer.from("open_position_account"),
-    //       payer.publicKey.toBuffer(),
-    //       tradingPda.toBuffer(),
-    //       Buffer.from([tradingBefore.openPositionsCount - 1]),
-    //     ],
-    //     program.programId,
-    //   );
+    it("Should close a position and refund balance", async () => {
+      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
+      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const arena = arenaAccounts[0];
 
-    //   // Unauthorized attempt with different signer
-    //   const intruder = new Keypair();
-    //   svm.airdrop(intruder.publicKey, BigInt(LAMPORTS_PER_SOL));
-    //   try {
-    //     await program.methods.closePosition()
-    //       .accounts({
-    //         openPositionAccount: openPosPda,
-    //         priceUpdate: priceAccount,
-    //         arenaAccount: arena.selfkey,
-    //         signer: intruder.publicKey,
-    //       })
-    //       .signers([intruder])
-    //       .rpc();
-    //     expect.fail("Expected unauthorized close to fail");
-    //   } catch (error) {
-    //     expect(error.message).to.include("You are not authorised to perform this function");
-    //   }
+      const [ tradingPda ] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("trading_account_for_arena"), payer.publicKey.toBuffer(), arena.selfkey.toBuffer()],
+        program.programId,
+      );
 
-    //   // Authorized close
-    //   await program.methods.closePosition()
-    //     .accounts({
-    //       openPositionAccount: openPosPda,
-    //       priceUpdate: priceAccount,
-    //       arenaAccount: arena.selfkey,
-    //       signer: payer.publicKey,
-    //     })
-    //     .signers([payer])
-    //     .rpc();
+      const priceAccount = createMockPriceUpdateAccount(svm, assetPrice * 100_000_000, -8);
+      const tradingPdaData = await program.account.tradingAccountForArena.fetch(tradingPda)
 
-    //   const tradingAfter = await program.account.tradingAccountForArena.fetch(tradingPda);
-    //   expect(Number(tradingAfter.microUsdcBalance)).to.be.greaterThan(Number(tradingBefore.microUsdcBalance));
-    // });
+      const positions = await getPositionAccountsForArena(tradingPdaData.openPositionsCount, payer, arena.selfkey, program);
+      const currPos = positions[0];
+
+      // Authorized close
+      await program.methods.closePosition()
+        .accounts({
+          openPositionAccount: currPos.selfkey,
+          priceUpdate: priceAccount,
+          arenaAccount: arena.selfkey,
+          signer: payer.publicKey,
+        })
+        .signers([payer])
+        .rpc();
+
+      const tradingAfter = await program.account.tradingAccountForArena.fetch(tradingPda);
+
+      expect(Number(tradingAfter.microUsdcBalance)).to.be.greaterThan(Number(INITIAL_BALANCE));
+      
+      const updatedPositions = await getPositionAccountsForArena(tradingPdaData.openPositionsCount, payer, arena.selfkey, program);
+      expect(updatedPositions.length).to.equal(0);
+    });
   })
 })
