@@ -24,7 +24,7 @@ interface TradingAccountForArena {
   selfkey: PublicKey;
   authority: PublicKey;
   openPositionsCount: number;
-  usdcBalance: number;
+  microUsdcBalance: BN;
   bump: number;
 }
 
@@ -34,18 +34,6 @@ interface OpenPositionAccount {
   quantity: number;
   bump: number;
 }
-
-type UpdatePositionAccounts = {
-  openPositionAccount: PublicKey;
-  tradingAccountForArena: PublicKey;
-  arenaAccount: PublicKey;
-};
-
-type ClosePositionAccounts = {
-  openPositionAccount: PublicKey;
-  tradingAccountForArena: PublicKey;
-  arenaAccount: PublicKey;
-};
 
 const AnchorInteractor = () => {
   const { connection } = useConnection();
@@ -380,7 +368,7 @@ const AnchorInteractor = () => {
     }
   };
 
-  const updatePositionQuantity = async (arenaPubkey: PublicKey, tradingAccount: TradingAccountForArena, position: OpenPositionAccount, deltaQty: number) => {
+  const updatePositionQuantity = async (arenaPubkey: PublicKey, position: OpenPositionAccount, deltaQty: number) => {
     if (!program || !wallet) return;
     setLoading(true);
     try {
@@ -388,9 +376,9 @@ const AnchorInteractor = () => {
         .updatePosition(deltaQty)
         .accounts({
           openPositionAccount: position.selfkey,
-          tradingAccountForArena: tradingAccount.selfkey,
           arenaAccount: arenaPubkey,
-        } as UpdatePositionAccounts)
+          priceUpdate: "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
+        })
         .transaction();
 
       transaction.feePayer = wallet.publicKey;
@@ -409,7 +397,7 @@ const AnchorInteractor = () => {
     }
   };
 
-  const closePosition = async (arenaPubkey: PublicKey, tradingAccount: TradingAccountForArena, position: OpenPositionAccount) => {
+  const closePosition = async (arenaPubkey: PublicKey, position: OpenPositionAccount) => {
     if (!program || !wallet) return;
     setLoading(true);
     try {
@@ -417,9 +405,9 @@ const AnchorInteractor = () => {
         .closePosition()
         .accounts({
           openPositionAccount: position.selfkey,
-          tradingAccountForArena: tradingAccount.selfkey,
           arenaAccount: arenaPubkey,
-        } as ClosePositionAccounts)
+          priceUpdate: "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
+        })
         .transaction();
 
       transaction.feePayer = wallet.publicKey;
@@ -608,6 +596,7 @@ const AnchorInteractor = () => {
                             </div>
                             {tradingAccount ? (
                               <div>
+                                <div>balance: {(Number(tradingAccount.microUsdcBalance)/1000000).toString()}</div>
                                 <pre className="bg-white p-3 rounded text-sm overflow-auto mb-3">
                                   {JSON.stringify(tradingAccount, null, 2)}
                                 </pre>
@@ -677,14 +666,14 @@ const AnchorInteractor = () => {
                                           className="border rounded px-2 py-1 text-sm w-28"
                                         />
                                         <Button
-                                          onClick={() => updatePositionQuantity(arena.selfkey, tradingAccount, pos, updateQty[pos.selfkey.toString()] ?? 0)}
+                                          onClick={() => updatePositionQuantity(arena.selfkey, pos, updateQty[pos.selfkey.toString()] ?? 0)}
                                           disabled={loading}
                                           className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded text-sm"
                                         >
                                           {loading ? "Updating..." : "Update Quantity"}
                                         </Button>
                                         <Button
-                                          onClick={() => closePosition(arena.selfkey, tradingAccount, pos)}
+                                          onClick={() => closePosition(arena.selfkey, pos)}
                                           disabled={loading}
                                           className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
                                         >

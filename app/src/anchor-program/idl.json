@@ -359,6 +359,9 @@
           }
         },
         {
+          "name": "price_update"
+        },
+        {
           "name": "arena_account"
         },
         {
@@ -640,6 +643,9 @@
           }
         },
         {
+          "name": "price_update"
+        },
+        {
           "name": "arena_account"
         },
         {
@@ -914,8 +920,8 @@
             "type": "u8"
           },
           {
-            "name": "usdc_balance",
-            "type": "i32"
+            "name": "micro_usdc_balance",
+            "type": "u64"
           },
           {
             "name": "bump",

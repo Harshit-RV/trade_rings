@@ -365,6 +365,9 @@ export type EphemeralRollups = {
           }
         },
         {
+          "name": "priceUpdate"
+        },
+        {
           "name": "arenaAccount"
         },
         {
@@ -646,6 +649,9 @@ export type EphemeralRollups = {
           }
         },
         {
+          "name": "priceUpdate"
+        },
+        {
           "name": "arenaAccount"
         },
         {
@@ -920,8 +926,8 @@ export type EphemeralRollups = {
             "type": "u8"
           },
           {
-            "name": "usdcBalance",
-            "type": "i32"
+            "name": "microUsdcBalance",
+            "type": "u64"
           },
           {
             "name": "bump",
