@@ -88,7 +88,12 @@ pub mod ephemeral_rollups {
         require!(open_pos.quantity + quantity >= 0, EphemeralRollupError::ShortingUnsupported);
         
         open_pos.quantity += quantity;
-        trading_account.micro_usdc_balance -= total_cost as u64;
+        
+        if total_cost < 0 {
+            trading_account.micro_usdc_balance += (-total_cost) as u64;
+        } else {
+            trading_account.micro_usdc_balance -= total_cost as u64;
+        }
 
         Ok(())
     }
