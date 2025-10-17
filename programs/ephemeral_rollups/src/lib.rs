@@ -12,8 +12,7 @@ fn get_total_cost(price: i64, exponent: i32, quantity_scaled: i64) -> i128 {
     let current_price_f64 = (price as f64) * 10f64.powi(exponent + 6); // +6 because we're storing balance in micro-USDC
     let current_price = current_price_f64.round().clamp(i64::MIN as f64, i64::MAX as f64) as i64;
 
-    let actual_quantity = quantity_scaled as i128 / QUANTITY_SCALE_FACTOR  as i128;
-    current_price as i128 * actual_quantity
+    (current_price as i128 * quantity_scaled as i128) / QUANTITY_SCALE_FACTOR as i128
 }
 
 #[program]
