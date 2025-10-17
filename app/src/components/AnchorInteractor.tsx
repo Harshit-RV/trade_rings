@@ -7,6 +7,7 @@ import { PublicKey } from "@solana/web3.js";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
 
+
 interface UserProfile {
   pubkey: PublicKey;
   arenasCreatedCount: number;
@@ -31,7 +32,7 @@ interface TradingAccountForArena {
 interface OpenPositionAccount {
   selfkey: PublicKey;
   asset: string;
-  quantity: number;
+  quantityRaw: BN; // Fixed-point representation: quantity * 10^6
   bump: number;
 }
 
@@ -305,7 +306,8 @@ const AnchorInteractor = () => {
     try {
       const arenaKey = arenaPubkey.toString();
       const asset = newPositionAsset[arenaKey] || "";
-      const qty = newPositionQty[arenaKey] ?? 0;
+      // Convert fractional quantity to fixed-point representation
+      const qty = new BN(Math.floor((newPositionQty[arenaKey] || 0) * 1_000_000));
 
       const transaction = await program.methods
         .openPosition(asset, qty)
@@ -356,7 +358,7 @@ const AnchorInteractor = () => {
 
           const pos = await program.account.openPositionAccount.fetch(pda);
           console.log(pos)
-          positions.push({ ...(pos as unknown as { asset: string; quantity: number; bump: number }), selfkey: pda } as OpenPositionAccount);
+          positions.push({ ...(pos as unknown as { asset: string; quantityRaw: BN; bump: number }), selfkey: pda } as OpenPositionAccount);
         } catch (error) {
           console.error(`Error fetching open position ${i}:`, error);
         }
@@ -370,10 +372,13 @@ const AnchorInteractor = () => {
 
   const updatePositionQuantity = async (arenaPubkey: PublicKey, position: OpenPositionAccount, deltaQty: number) => {
     if (!program || !wallet) return;
+    // Convert fractional quantity to fixed-point representation
+    const deltaQtyRaw = new BN(deltaQty * 1_000_000);
+    console.log(deltaQtyRaw.toString());
     setLoading(true);
     try {
       const transaction = await program.methods
-        .updatePosition(deltaQty)
+        .updatePosition(deltaQtyRaw)
         .accounts({
           openPositionAccount: position.selfkey,
           arenaAccount: arenaPubkey,
@@ -608,7 +613,7 @@ const AnchorInteractor = () => {
                                     className="border rounded px-2 py-1 text-sm"
                                   />
                                   <input
-                                    placeholder="Quantity"
+                                    placeholder="Quantity (e.g., 0.1, 0.5)"
                                     type="number"
                                     value={newPositionQty[arenaKey] ?? 0}
                                     onChange={(e) => setNewPositionQty(prev => ({ ...prev, [arenaKey]: Number(e.target.value) }))}
@@ -654,12 +659,12 @@ const AnchorInteractor = () => {
                                       <div className="flex flex-col text-sm">
                                         <span className="font-medium">Position #{posIndex + 1}</span>
                                         <span className="text-gray-600">Asset: {pos.asset}</span>
-                                        <span className="text-gray-600">Quantity: {pos.quantity}</span>
+                                        <span className="text-gray-600">Quantity: {(pos.quantityRaw.toNumber() / 1_000_000).toFixed(3)}</span>
                                         <span className="text-gray-600">Pubkey: {pos.selfkey.toString()}</span>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <input
-                                          placeholder="Delta Qty"
+                                          placeholder="Delta Qty (e.g., 0.1)"
                                           type="number"
                                           value={updateQty[pos.selfkey.toString()] ?? 0}
                                           onChange={(e) => setUpdateQty(prev => ({ ...prev, [pos.selfkey.toString()]: Number(e.target.value) }))}

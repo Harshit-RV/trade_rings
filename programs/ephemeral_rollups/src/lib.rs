@@ -3,11 +3,16 @@ use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2};
 
 declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
 
-fn get_total_cost(price: i64, exponent: i32, quantity: i32) -> i128 {
+// Fixed-point scale factor: 10^6
+// This means 1 BTC is stored as 1,000,000 units
+const QUANTITY_SCALE_FACTOR: u64 = 1_000_000;
+
+fn get_total_cost(price: i64, exponent: i32, quantity_scaled: i64) -> i128 {
     let current_price_f64 = (price as f64) * 10f64.powi(exponent + 6); // +6 because we're storing balance in micro-USDC
     let current_price = current_price_f64.round().clamp(i64::MIN as f64, i64::MAX as f64) as i64;
 
-    current_price as i128 * quantity as i128
+    let actual_quantity = quantity_scaled as i128 / QUANTITY_SCALE_FACTOR  as i128;
+    current_price as i128 * actual_quantity
 }
 
 #[program]
@@ -53,9 +58,9 @@ pub mod ephemeral_rollups {
         Ok(())
     }
     
-    pub fn open_position(ctx: Context<OpenPosition>, asset: String, quantity: i32) -> Result<()> {
+    pub fn open_position(ctx: Context<OpenPosition>, asset: String, quantity_scaled: i64) -> Result<()> {
         require!(asset.len() <= 10, EphemeralRollupError::AssetNameTooLong);
-        require!(quantity > 0, EphemeralRollupError::ShortingUnsupported);
+        require!(quantity_scaled > 0, EphemeralRollupError::ShortingUnsupported);
     
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
         let open_pos = &mut ctx.accounts.open_position_account;
@@ -63,10 +68,10 @@ pub mod ephemeral_rollups {
 
         open_pos.bump = ctx.bumps.open_position_account;
         open_pos.asset = asset;
-        open_pos.quantity = quantity;
+        open_pos.quantity_raw = quantity_scaled as u64;
         trading_account.open_positions_count += 1;
 
-        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, quantity);
+        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, quantity_scaled);
         
         require!(total_cost <= trading_account.micro_usdc_balance as i128, EphemeralRollupError::InsufficientFunds);
         
@@ -77,17 +82,21 @@ pub mod ephemeral_rollups {
 
     // this function expects the correct open_position_account already passed. 
     // Frontend must go through all open position accounts and find the one that belongs to the asset they want to update.
-    pub fn update_position(ctx: Context<UpdateOpenPosition>, quantity: i32) -> Result<()> {
+    pub fn update_position(ctx: Context<UpdateOpenPosition>, quantity_scaled: i64) -> Result<()> {
         let open_pos = &mut ctx.accounts.open_position_account;
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
         let latest_price_data = ctx.accounts.price_update.price_message;
 
-        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, quantity);
+        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, quantity_scaled);
 
         require!(total_cost <= trading_account.micro_usdc_balance as i128, EphemeralRollupError::InsufficientFunds);
-        require!(open_pos.quantity + quantity >= 0, EphemeralRollupError::ShortingUnsupported);
-        
-        open_pos.quantity += quantity;
+        require!(open_pos.quantity_raw as i64 + quantity_scaled >= 0, EphemeralRollupError::ShortingUnsupported);
+
+        if quantity_scaled < 0 {
+            open_pos.quantity_raw -= -quantity_scaled as u64;
+        } else {
+            open_pos.quantity_raw += quantity_scaled as u64;
+        }
         
         if total_cost < 0 {
             trading_account.micro_usdc_balance += (-total_cost) as u64;
@@ -103,7 +112,7 @@ pub mod ephemeral_rollups {
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
         let latest_price_data = ctx.accounts.price_update.price_message;
 
-        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, open_pos.quantity);
+        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, open_pos.quantity_raw as i64);
 
         require_keys_eq!(ctx.accounts.signer.key(), trading_account.authority.key(), EphemeralRollupError::Unauthorised);
         
@@ -219,7 +228,7 @@ pub struct OpenPositionAccount {
     // TODO: figure out what length we should put here
     #[max_len(10)]
     asset: String,
-    quantity: i32,
+    quantity_raw: u64, // Fixed-point representation: quantity * 10^6
     bump: u8
 }
 
