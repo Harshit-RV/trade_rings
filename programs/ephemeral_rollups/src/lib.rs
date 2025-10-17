@@ -1,6 +1,14 @@
 use anchor_lang::prelude::*;
+use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2};
 
 declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
+
+fn get_total_cost(price: i64, exponent: i32, quantity: i32) -> i128 {
+    let current_price_f64 = (price as f64) * 10f64.powi(exponent + 6); // +6 because we're storing balance in micro-USDC
+    let current_price = current_price_f64.round().clamp(i64::MIN as f64, i64::MAX as f64) as i64;
+
+    current_price as i128 * quantity as i128
+}
 
 #[program]
 pub mod ephemeral_rollups {
@@ -40,29 +48,30 @@ pub mod ephemeral_rollups {
         trading_account.open_positions_count = 0;
 
         // TODO: figure out what the starting balance should be
-        trading_account.usdc_balance = 1_000_000;
+        trading_account.micro_usdc_balance = 1_000_000_000_000; // 1 million USDC
 
         Ok(())
     }
     
     pub fn open_position(ctx: Context<OpenPosition>, asset: String, quantity: i32) -> Result<()> {
         require!(asset.len() <= 10, EphemeralRollupError::AssetNameTooLong);
-
+        require!(quantity > 0, EphemeralRollupError::ShortingUnsupported);
+    
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
-        let open_pos =  &mut ctx.accounts.open_position_account;
-        
+        let open_pos = &mut ctx.accounts.open_position_account;
+        let latest_price_data = ctx.accounts.price_update.price_message;
+
         open_pos.bump = ctx.bumps.open_position_account;
-        trading_account.open_positions_count += 1;
-        
-        let price  =  100; // TODO: get current price of asset using Oracle price feeds.
-
-        require!(quantity * price <= trading_account.usdc_balance, EphemeralRollupError::InsufficientFunds);
-        require!(quantity >= 0, EphemeralRollupError::ShortingUnsupported);
-
-        trading_account.usdc_balance -= quantity * price;
         open_pos.asset = asset;
         open_pos.quantity = quantity;
+        trading_account.open_positions_count += 1;
+
+        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, quantity);
         
+        require!(total_cost <= trading_account.micro_usdc_balance as i128, EphemeralRollupError::InsufficientFunds);
+        
+        trading_account.micro_usdc_balance -= total_cost as u64;
+
         Ok(())
     }
 
@@ -71,14 +80,20 @@ pub mod ephemeral_rollups {
     pub fn update_position(ctx: Context<UpdateOpenPosition>, quantity: i32) -> Result<()> {
         let open_pos = &mut ctx.accounts.open_position_account;
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
-        
-        let price = 100; // TODO: get current price of asset using Oracle price feeds.
+        let latest_price_data = ctx.accounts.price_update.price_message;
 
-        require!(quantity * price <= trading_account.usdc_balance, EphemeralRollupError::InsufficientFunds);
+        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, quantity);
+
+        require!(total_cost <= trading_account.micro_usdc_balance as i128, EphemeralRollupError::InsufficientFunds);
         require!(open_pos.quantity + quantity >= 0, EphemeralRollupError::ShortingUnsupported);
         
         open_pos.quantity += quantity;
-        trading_account.usdc_balance -= quantity * price;
+        
+        if total_cost < 0 {
+            trading_account.micro_usdc_balance += (-total_cost) as u64;
+        } else {
+            trading_account.micro_usdc_balance -= total_cost as u64;
+        }
 
         Ok(())
     }
@@ -86,12 +101,13 @@ pub mod ephemeral_rollups {
     pub fn close_position(ctx: Context<ClosePosition>) -> Result<()> {
         let open_pos = &ctx.accounts.open_position_account;
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
+        let latest_price_data = ctx.accounts.price_update.price_message;
+
+        let total_cost = get_total_cost(latest_price_data.price, latest_price_data.exponent, open_pos.quantity);
 
         require_keys_eq!(ctx.accounts.signer.key(), trading_account.authority.key(), EphemeralRollupError::Unauthorised);
-
-        let price = 100; // TODO: get current price of asset using Oracle price feeds.
-    
-        trading_account.usdc_balance += open_pos.quantity * price;
+        
+        trading_account.micro_usdc_balance += total_cost as u64;
 
         // NOT DOING THIS: refer to TODO/DISCLAIMER on [TradingAccountForArena]
         // trading_account.open_positions_count -= 1;
@@ -99,7 +115,7 @@ pub mod ephemeral_rollups {
     }
 
     // TODO: for loop that gets all open_position_accounts and closes them
-    pub fn close_all_positions(ctx: Context<OpenPosition>) -> Result<()> {
+    pub fn close_all_positions(_ctx: Context<OpenPosition>) -> Result<()> {
         Ok(())
     }
 }
@@ -172,7 +188,8 @@ pub struct TradingAccountForArena {
     // find a more scalable way to predictably get accounts.
     // temp fix: don't subtract from open_positions_count on account close and go until this count on frontend and show data of accounts that are not empty
     open_positions_count: u8,
-    usdc_balance: i32,
+    // 1 USDC = 1_000_000 micro-USDC
+    micro_usdc_balance: u64,
     bump: u8,
 }
 
@@ -217,6 +234,8 @@ pub struct OpenPosition<'info> {
     )]
     pub open_position_account: Account<'info, OpenPositionAccount>,
 
+    pub price_update: Account<'info, PriceUpdateV2>,
+
     #[account(
         mut,
         seeds = [b"trading_account_for_arena", signer.key().as_ref(), arena_account.key().as_ref()],
@@ -243,6 +262,8 @@ pub struct UpdateOpenPosition<'info> {
     )]
     pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
 
+    pub price_update: Account<'info, PriceUpdateV2>,
+
     pub arena_account: Account<'info, ArenaAccount>,
 
     #[account(mut)]
@@ -260,6 +281,8 @@ pub struct ClosePosition<'info> {
         bump = trading_account_for_arena.bump
     )]
     pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
+
+    pub price_update: Account<'info, PriceUpdateV2>,
 
     pub arena_account: Account<'info, ArenaAccount>,
 
