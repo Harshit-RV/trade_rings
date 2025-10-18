@@ -23,7 +23,7 @@ const App = () => {
       <Routes>
         <Route index element={<AnchorInteractor />} />  
         <Route path='/arena' element={<Arena />} />  
-        <Route path='/trade' element={<ManualTrade />} />  
+        <Route path='/trade/:arenaId' element={<ManualTrade />} />  
       </Routes>
     </div>
   );
