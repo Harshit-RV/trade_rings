@@ -17,6 +17,18 @@ export interface OpenPositionAccount {
   quantityRaw: BN; // Fixed-point representation: quantity * 10^6
   bump: number;
 }
+export interface UserProfile {
+  pubkey: PublicKey;
+  arenasCreatedCount: number;
+  bump: number;
+  name: string;
+}
+export interface ArenaAccount {
+  selfkey: PublicKey;
+  creator: PublicKey;
+  bump: number;
+}
+
 
 class AnchorProgramService {
   program: Program<EphemeralRollups>
@@ -81,6 +93,65 @@ class AnchorProgramService {
       return positions;
     } catch (error) {
       console.error("Error fetching open positions:", error);
+      return null
+    }
+  };
+
+  // needed by fetchUserArenas
+  private fetchUserProfile = async () => {
+    try {
+      const [ pda ] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("user_profile_account"), 
+          this.wallet.publicKey.toBuffer()
+        ],
+        new PublicKey(this.programAddress),
+      );
+
+      const profileAccount = await this.program.account.userProfile.fetch(pda);
+      
+      return profileAccount as UserProfile;
+    } catch (error) {
+      console.error("Profile not found:", error);
+      return null;
+    }
+  };
+
+  fetchUserArenas = async () : Promise<ArenaAccount[] | null> => {
+    const userProfile = await this.fetchUserProfile()
+
+    if (!userProfile) return null;
+    
+    try {
+      const arenas: ArenaAccount[] = [];
+      
+      // Fetch arenas based on arenas_created_count
+      for (let i = 0; i < userProfile.arenasCreatedCount; i++) {
+        try {
+          const countLE = new BN(i).toArrayLike(Buffer, "le", 1);
+          
+          const [pda] = PublicKey.findProgramAddressSync(
+            [
+              Buffer.from("arena_account"),
+              this.wallet.publicKey.toBuffer(),
+              countLE
+            ],
+            new PublicKey(this.programAddress),
+          );
+
+          const arenaAccount = await this.program.account.arenaAccount.fetch(pda);
+          arenas.push({
+            ...arenaAccount,
+            selfkey: pda,
+          });
+        } catch (error) {
+          console.error(`Error fetching arena ${i}:`, error);
+        }
+      }
+      
+      return arenas;
+    } catch (error) {
+      console.error("Error fetching user arenas:", error);
       return null
     }
   };
