@@ -1,3 +1,4 @@
+import AssetList from "./AssetList"
 import Trade from "./Trade"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -12,7 +13,9 @@ const Arena = () => {
           <TabsTrigger className="px-8" value="leaderboard">Leaderboard</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">Coming soon...</TabsContent>
+        <TabsContent value="overview">
+          <AssetList/>
+        </TabsContent>
         <TabsContent value="trade">
           <Trade />
         </TabsContent>
