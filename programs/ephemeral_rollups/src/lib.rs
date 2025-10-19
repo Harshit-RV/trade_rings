@@ -4,6 +4,11 @@ use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2};
 
 declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
 
+pub const PROFILE_ACCOUNT_SEED: &[u8] = b"user_profile_account";
+pub const ARENA_ACCOUNT_SEED: &[u8] = b"arena_account";
+pub const TRADING_ACCOUNT_SEED: &[u8] = b"trading_account_for_arena";
+pub const OPEN_POSITION_ACCOUNT_SEED: &[u8] = b"open_position_account";
+
 // Fixed-point scale factor: 10^6
 // This means 1 BTC is stored as 1,000,000 units
 const QUANTITY_SCALE_FACTOR: u64 = 1_000_000;
@@ -147,7 +152,7 @@ pub struct CreateUserProfile<'info> {
         init,
         payer = signer,
         space = 8 + UserProfile::INIT_SPACE,
-        seeds = [b"user_profile_account", signer.key().as_ref()],
+        seeds = [PROFILE_ACCOUNT_SEED, signer.key().as_ref()],
         bump
     )]
     pub profile_account: Account<'info, UserProfile>,
@@ -172,14 +177,14 @@ pub struct CreateArena<'info> {
         init,
         payer = signer,
         space = 8 + ArenaAccount::INIT_SPACE,
-        seeds = [b"arena_account", signer.key().as_ref(), &signer_profile_account.arenas_created_count.to_le_bytes()],
+        seeds = [ARENA_ACCOUNT_SEED, signer.key().as_ref(), &signer_profile_account.arenas_created_count.to_le_bytes()],
         bump
     )]
     pub arena_account: Account<'info, ArenaAccount>,
 
     #[account(
         mut, 
-        seeds = [b"user_profile_account", signer.key().as_ref()],
+        seeds = [PROFILE_ACCOUNT_SEED, signer.key().as_ref()],
         bump = signer_profile_account.bump
     )]
     pub signer_profile_account: Account<'info, UserProfile>,
@@ -210,7 +215,7 @@ pub struct CreateTradingAccountForArena<'info> {
         init,
         payer = signer,
         space = 8 + TradingAccountForArena::INIT_SPACE,
-        seeds = [b"trading_account_for_arena", signer.key().as_ref(), arena_account.key().as_ref()],
+        seeds = [TRADING_ACCOUNT_SEED, signer.key().as_ref(), arena_account.key().as_ref()],
         bump
     )]
     pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
@@ -240,7 +245,7 @@ pub struct OpenPosition<'info> {
         init, 
         payer = signer,
         space = 8 + OpenPositionAccount::INIT_SPACE,
-        seeds = [b"open_position_account", signer.key().as_ref(), trading_account_for_arena.key().as_ref(), &trading_account_for_arena.open_positions_count.to_le_bytes()],
+        seeds = [OPEN_POSITION_ACCOUNT_SEED, signer.key().as_ref(), trading_account_for_arena.key().as_ref(), &trading_account_for_arena.open_positions_count.to_le_bytes()],
         bump
     )]
     pub open_position_account: Account<'info, OpenPositionAccount>,
@@ -249,7 +254,7 @@ pub struct OpenPosition<'info> {
 
     #[account(
         mut,
-        seeds = [b"trading_account_for_arena", signer.key().as_ref(), arena_account.key().as_ref()],
+        seeds = [TRADING_ACCOUNT_SEED, signer.key().as_ref(), arena_account.key().as_ref()],
         bump = trading_account_for_arena.bump
     )]
     pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
@@ -268,7 +273,7 @@ pub struct UpdateOpenPosition<'info> {
 
     #[account(
         mut,
-        seeds = [b"trading_account_for_arena", signer.key().as_ref(), arena_account.key().as_ref()],
+        seeds = [TRADING_ACCOUNT_SEED, signer.key().as_ref(), arena_account.key().as_ref()],
         bump = trading_account_for_arena.bump
     )]
     pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
@@ -288,7 +293,7 @@ pub struct ClosePosition<'info> {
 
     #[account(
         mut,
-        seeds = [b"trading_account_for_arena", signer.key().as_ref(), arena_account.key().as_ref()],
+        seeds = [TRADING_ACCOUNT_SEED, signer.key().as_ref(), arena_account.key().as_ref()],
         bump = trading_account_for_arena.bump
     )]
     pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
