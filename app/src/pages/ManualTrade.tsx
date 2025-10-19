@@ -63,8 +63,8 @@ const ManualTrade = () => {
   }, [arenaId, program, wallet])
 
   return (
-    <div className="flex items-start justify-center pt-20 px-8 gap-6">
-      <div className="w-[25%]">
+    <div className="flex relative items-start justify-center pt-20 px-8 gap-6">
+      <div className="absolute top-3 left-3 w-[15%]">
         <Leaderboard />
       </div>
       
@@ -78,7 +78,7 @@ const ManualTrade = () => {
       
       {
         tradingAccount && (
-          <div className="w-[25%]">
+          <div className="absolute top-3 right-3  w-[20%]">
             <Holdings tradingAccount={tradingAccount} openPositions={openPositions}/>
           </div>
         )
@@ -95,8 +95,8 @@ const Leaderboard = () => {
   }));
 
   return (
-    <div className="bg-[#000000]/65 rounded-4xl p-6 w-full">
-      <h2 className="text-xl font-bold mb-4">Leaderboard</h2>
+    <div className="bg-[#000000]/50 rounded-3xl p-6 w-full">
+      <h2 className="text-lg font-bold mb-4">Leaderboard</h2>
       <div className="text-4xl font-bold mb-6">#1</div>
       <div className="space-y-2">
         <div className="flex justify-between text-sm font-medium text-gray-400 mb-3">
@@ -135,15 +135,19 @@ const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: Trading
   };
 
   return (
-    <div className="bg-[#000000]/65 rounded-4xl p-6 w-full">
-      <h2 className="text-xl font-bold mb-4">Your Holdings</h2>
-      <div className="text-3xl font-bold mb-6">${(Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD).toFixed(2)}</div>
+    <div className="bg-[#000000]/50 rounded-3xl p-6 w-full">
+      <h2 className="text-lg font-bold mb-4">Your Holdings</h2>
+      <div className="text-3xl font-bold mb-6 bg-[#1F1F1F] p-2 rounded-lg">
+        $ {(Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD).toLocaleString('en-US')}
+      </div>
       <div className="space-y-2">
+        
         <div className="flex justify-between text-sm font-medium text-gray-400 mb-3">
           <span>Asset</span>
           <span>Quantity</span>
           <span>Value</span>
         </div>
+        
         {openPositions.length > 0 ? (
           openPositions.map((position, index) => (
             <div key={index} className="flex justify-between items-center">
@@ -160,6 +164,7 @@ const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: Trading
             <p className="text-sm">No open positions</p>
           </div>
         )}
+
       </div>
     </div>
   );
