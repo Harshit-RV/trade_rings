@@ -71,7 +71,7 @@ const ManualTrade = () => {
       <div className="w-[30%]">
         <SwapComponent />
         <div className="flex gap-4 pt-4">
-          <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl">{arenaId}</div>
+          <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
         </div>
       </div>
@@ -95,7 +95,7 @@ const Leaderboard = () => {
   }));
 
   return (
-    <div className="bg-[#000000]/50 rounded-3xl p-6 w-full">
+    <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
       <h2 className="text-md font-bold mb-4">Leaderboard</h2>
       <div className="text-4xl font-bold mb-6">#1</div>
       <div className="space-y-2">
@@ -135,7 +135,7 @@ const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: Trading
   };
 
   return (
-    <div className="bg-[#000000]/50 rounded-3xl p-6 w-full">
+    <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
       <h2 className="text-md font-bold mb-4">Your Holdings</h2>
       <div className="text-2xl font-bold mb-6 bg-[#1F1F1F] p-2 rounded-lg">
         $ {(Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD).toLocaleString('en-US')}
@@ -172,7 +172,7 @@ const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: Trading
 
 const SwapComponent = () => {
   return (
-    <div className="flex-shrink-0 bg-[#000000]/65 h-min py-7 px-4 rounded-4xl gap-5 flex flex-col">
+    <div className="flex-shrink-0 bg-[#000000]/50 h-min py-7 px-4 rounded-4xl gap-5 flex flex-col border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
       <Tabs defaultValue="buy" className="w-full">
         <TabsList className="w-full h-10">
           <TabsTrigger 

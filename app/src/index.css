@@ -118,3 +118,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* only here for reference; using tailwind equivalent in divs wherever required */
+.glass {
+  background: rgba(95, 95, 95,0.3);
+  /* box-shadow: 0 5px 5px rgba(255, 255, 255, 0.1); */
+  border: 0.1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+}
+/* bg-[rgba(95,95,95,0.3)] border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px] */

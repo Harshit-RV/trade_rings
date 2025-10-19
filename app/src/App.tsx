@@ -7,6 +7,7 @@ import Arena from './pages/Arena';
 import ManualTrade from './pages/ManualTrade';
 import ArenaList from './pages/ArenaList';
 import Breadcrumb from './components/Breadcrumb';
+import TradeTabs from './components/TradeTabs';
 
 
 const App = () => {
@@ -19,9 +20,13 @@ const App = () => {
   return (
     <div className="bg-[url('/background.jpg')] bg-cover h-screen flex flex-col overflow-y-scroll">
       <div><Toaster/></div>
-      <div className='p-1 px-4 flex justify-between items-center bg-background/40 border-b w-full'>
+      <div className='relative p-1 px-4 flex justify-between items-center bg-background/40 border-b w-full'>
         <div className="flex items-center">
           <Breadcrumb />
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2">
+          {/* will only be visible on Trade screen */}
+          <TradeTabs />
         </div>
         <div><WalletMultiButton/></div>
       </div>
