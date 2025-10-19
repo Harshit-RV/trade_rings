@@ -96,7 +96,7 @@ const Leaderboard = () => {
 
   return (
     <div className="bg-[#000000]/50 rounded-3xl p-6 w-full">
-      <h2 className="text-lg font-bold mb-4">Leaderboard</h2>
+      <h2 className="text-md font-bold mb-4">Leaderboard</h2>
       <div className="text-4xl font-bold mb-6">#1</div>
       <div className="space-y-2">
         <div className="flex justify-between text-sm font-medium text-gray-400 mb-3">
@@ -136,8 +136,8 @@ const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: Trading
 
   return (
     <div className="bg-[#000000]/50 rounded-3xl p-6 w-full">
-      <h2 className="text-lg font-bold mb-4">Your Holdings</h2>
-      <div className="text-3xl font-bold mb-6 bg-[#1F1F1F] p-2 rounded-lg">
+      <h2 className="text-md font-bold mb-4">Your Holdings</h2>
+      <div className="text-2xl font-bold mb-6 bg-[#1F1F1F] p-2 rounded-lg">
         $ {(Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD).toLocaleString('en-US')}
       </div>
       <div className="space-y-2">
