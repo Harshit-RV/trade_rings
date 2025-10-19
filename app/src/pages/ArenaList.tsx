@@ -3,15 +3,19 @@ import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import type { EphemeralRollups } from "@/anchor-program/types";
 import idl from "@/anchor-program/idl.json";
-import AnchorProgramService, { type ArenaAccount } from "@/anchor-program/anchor-program-service";
-import { Link } from "react-router";
+//import AnchorProgramService, { type ArenaAccount } from "@/anchor-program/anchor-program-service";
+import AnchorProgramService from "@/anchor-program/anchor-program-service";
+
+import { ArenaCardsList } from "@/components/arenaCardList";
+import { createArena, initializeRollupsService } from "@/lib/anchor_interactions";
 
 
 const ArenaList = () => {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
 
-  const [ arenas, setArenas ] = useState<ArenaAccount[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [ arenas, setArenas ] = useState<any[]>([])
 
   const provider = useMemo(() => {
     if (!wallet) return null;
@@ -39,7 +43,12 @@ const ArenaList = () => {
       const arenaList = await anchorProgramService.fetchUserArenas();
 
       if (!arenaList) return
-      setArenas(arenaList)
+      const arenaListTemp=arenaList!.map((arena,index)=>{return  {name:`Arena ${index+1}`,
+      author:arena.creator.toString(),
+      timeline:"15, Oct - 31, Oct",
+      link:`/trade/${arena.selfkey}`,
+      people:500}})
+      setArenas(arenaListTemp)
 
     } catch (error) {
       console.error("Error in setup:", error);
@@ -47,23 +56,49 @@ const ArenaList = () => {
   }
 
   useEffect(() => {
+    if (program && wallet && connection) {
+      // Initialize the centralized service
+      initializeRollupsService(program, wallet, connection);
+    }
     setup();
-  }, [anchorProgramService])
+  }, [anchorProgramService, program, wallet, connection])
+ 
+   arenas.map((arena,index)=>{return  {name:`Arena ${index+1}`,
+    author: arena.creator?.toString(),
+    timeline:"15, Oct - 31, Oct",
+    link:`/trade/${arena.selfkey}`,
+    people:500}})
 
+    
   return (
     <div className="flex flex-col items-center justify-center py-10 px-8 gap-4">
+      <div className="flex justify-between w-full mb-0 items-end px-3 translate-y-2">
+          <span>Arenas</span>
+          <button 
+            className="py-1 px-6 rounded cursor-pointer dark-glass" 
+            onClick={async () => {
+              try {
+                if (!program || !wallet || !connection) {
+                  console.error("Missing required data for creating arena");
+                  return;
+                }
+                // Ensure service is initialized
+                initializeRollupsService(program, wallet, connection);
+                const txSig = await createArena();
+                console.log("Arena created:", txSig);
+                // Refresh the arena list
+                setup();
+              } catch (error) {
+                console.error("Error creating arena:", error);
+              }
+            }}
+          >
+            New +
+          </button>
+      </div>
+      <span className="mt-0 bg-white h-[1px] w-full"></span>
 
-      {
-        arenas.map((arena, index) => (
-          <Link to={`/trade/${arena.selfkey}`} key={index}>
-            <div className="py-6 px-6 rounded-2xl bg-[#000000]/65">
-              <p className="font-medium">Arena #{index + 1}</p>
-              <p className="text-sm mt-4">Creator: {arena.creator.toString()}</p>
-              <p className="text-sm">Bump: {arena.bump}</p>
-            </div>
-          </Link>
-        ))
-      }
+      {arenas&&<ArenaCardsList cards={arenas}/>}
 
       {
         arenas.length == 0 && (
@@ -77,3 +112,4 @@ const ArenaList = () => {
 
 
 export default ArenaList;
+
