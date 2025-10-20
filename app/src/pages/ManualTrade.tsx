@@ -17,6 +17,7 @@ import HoldingsChart from "@/components/HoldingsChart";
 
 
 import TradingViewWidget from "@/components/PriceHistoryChart";
+import BotTrading from "@/components/BotTrading";
 const ManualTrade = () => {
   const { arenaId } = useParams();
   const { connection } = useConnection();
@@ -159,6 +160,7 @@ const ManualTrade = () => {
             setToAmount(clamped.toString());
           }}
         />
+         {/* 
         <div className="flex gap-4 pt-4">
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
@@ -168,6 +170,7 @@ const ManualTrade = () => {
            toToken={toToken.symbol} 
            height={300}
          />
+         <BotTrading/> */}
       </div>
       
       {
