@@ -370,7 +370,6 @@ describe("unit tests", async () => {
           .rpc();
         expect.fail("Expected transaction to fail");
       } catch (error) {
-        console.log(error)
         expect(error.message).to.include("Your account does not have enough funds to execute this transactions.");
       }
     });

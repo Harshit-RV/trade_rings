@@ -1,0 +1,11 @@
+[2025-10-20 01:28:13] === Starting build script ===
+[2025-10-20 01:28:13] === Version Information ===
+[2025-10-20 01:28:13] Anchor version: anchor-cli 0.31.1
+[2025-10-20 01:28:13] Rust version: rustc 1.81.0 (eeb90cda1 2024-09-04)
+[2025-10-20 01:28:13] Cargo version: cargo 1.81.0 (2dbb1af80 2024-08-20)
+[2025-10-20 01:28:13] Solana version: solana-cli 2.1.0 (src:c1080de4; feat:3176011155, client:Agave)
+[2025-10-20 01:28:13] Node version: v23.3.0
+[2025-10-20 01:28:13] NPM version: 10.9.0
+[2025-10-20 01:28:13] Yarn version: 1.22.22
+[2025-10-20 01:28:15] Build successful
+[2025-10-20 01:28:15] === build script completed ===
