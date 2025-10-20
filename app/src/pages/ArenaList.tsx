@@ -46,6 +46,7 @@ const ArenaList = () => {
       author:arena.creator.toString(),
       timeline:"15, Oct - 31, Oct",
       link:`/trade/${arena.selfkey}`,
+      status:"Registered",
       people:500}})
       setArenas(arenaListTemp)
 
@@ -58,12 +59,7 @@ const ArenaList = () => {
     setup();
   }, [anchorProgramService])
  
-   arenas.map((arena,index)=>{return  {name:`Arena ${index+1}`,
-    author: arena.creator?.toString(),
-    timeline:"15, Oct - 31, Oct",
-    link:`/trade/${arena.selfkey}`,
-    people:500}})
-
+   
     
   return (
     <div className="flex flex-col items-center justify-center py-10 px-8 gap-4">
