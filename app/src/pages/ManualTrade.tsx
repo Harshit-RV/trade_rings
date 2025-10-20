@@ -30,7 +30,7 @@ const ManualTrade = () => {
   const [ toToken, setToToken ] = useState<Token>(TOKENS[1]); // Default to SOL
   const [ fromAmount, setFromAmount ] = useState<string>("");
   const [ toAmount, setToAmount ] = useState<string>("");
-
+  
   const provider = useMemo(() => {
     if (!wallet) return null;
     return new AnchorProvider(connection, wallet, { commitment: "processed" });
@@ -279,6 +279,7 @@ interface SwapComponentProps {
 }
 
 const SwapComponent = ({ fromToken, toToken, onTokenClick, onSwapTokens, balances, fromAmount, toAmount, onFromChange, onToChange }: SwapComponentProps) => {
+  const [ sliderValue, setSliderValue ] = useState<number>(5);
   return (
     <div className="flex-shrink-0 bg-[#000000]/50 h-min py-7 px-4 rounded-4xl gap-5 flex flex-col border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
       <Tabs defaultValue="buy" className="w-full">
@@ -376,8 +377,21 @@ const SwapComponent = ({ fromToken, toToken, onTokenClick, onSwapTokens, balance
               </button>
             ))}
           </div>
+      <div className="px-4 py-5">
 
+            <div>Slippage: {sliderValue} %</div>
+          <input
+          type="range"
+          min={0}
+          max={15}
+          step={0.25}
+          value={sliderValue}
+          onChange={(e) => setSliderValue(Number(e.target.value))}
+          className="w-full h-3 appearance-none bg-transparent"
+          aria-label="slider"
+          />
       
+          </div>
 
       <Button className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold">Swap</Button>
     </div>
