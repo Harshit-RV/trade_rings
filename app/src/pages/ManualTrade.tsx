@@ -10,6 +10,9 @@ import idl from "@/anchor-program/idl.json";
 import { MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
 import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
+import TokenSelector from "@/components/TokenSelector";
+import type { Token } from "@/types/token";
+import { TOKENS } from "@/data/tokens";
 
 
 const ManualTrade = () => {
@@ -19,6 +22,12 @@ const ManualTrade = () => {
 
   const [ tradingAccount, setTradingAccount ] = useState<TradingAccountForArena | null>(null);
   const [ openPositions, setOpenPositions ] = useState<OpenPositionAccount[]>([]);
+  
+  // Token selector state
+  const [ isTokenSelectorOpen, setIsTokenSelectorOpen ] = useState(false);
+  const [ selectedTokenType, setSelectedTokenType ] = useState<'from' | 'to' | null>(null);
+  const [ fromToken, setFromToken ] = useState<Token>(TOKENS[0]); // Default to USDC
+  const [ toToken, setToToken ] = useState<Token>(TOKENS[1]); // Default to SOL
 
   const provider = useMemo(() => {
     if (!wallet) return null;
@@ -62,6 +71,32 @@ const ManualTrade = () => {
     setup();
   }, [arenaId, program, wallet])
 
+  // Token selection handlers
+  const handleTokenClick = (type: 'from' | 'to') => {
+    setSelectedTokenType(type);
+    setIsTokenSelectorOpen(true);
+  };
+
+  const handleTokenSelect = (token: Token) => {
+    if (selectedTokenType === 'from') {
+      setFromToken(token);
+    } else if (selectedTokenType === 'to') {
+      setToToken(token);
+    }
+    setIsTokenSelectorOpen(false);
+    setSelectedTokenType(null);
+  };
+
+  const handleCloseTokenSelector = () => {
+    setIsTokenSelectorOpen(false);
+    setSelectedTokenType(null);
+  };
+
+  const handleSwapTokens = () => {
+    setFromToken(toToken);
+    setToToken(fromToken);
+  };
+
   return (
     <div className="flex relative items-start justify-center pt-20 px-8 gap-6">
       <div className="absolute top-3 left-3 w-[15%]">
@@ -69,7 +104,12 @@ const ManualTrade = () => {
       </div>
       
       <div className="w-[30%]">
-        <SwapComponent />
+        <SwapComponent 
+          fromToken={fromToken}
+          toToken={toToken}
+          onTokenClick={handleTokenClick}
+          onSwapTokens={handleSwapTokens}
+        />
         <div className="flex gap-4 pt-4">
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
@@ -84,6 +124,14 @@ const ManualTrade = () => {
         )
       }
       
+      {/* Token Selector Modal */}
+      <TokenSelector
+        isOpen={isTokenSelectorOpen}
+        onClose={handleCloseTokenSelector}
+        onSelectToken={handleTokenSelect}
+        currentToken={selectedTokenType === 'from' ? fromToken : toToken}
+        tokens={TOKENS}
+      />
     </div>
   )
 }
@@ -170,7 +218,14 @@ const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: Trading
   );
 };
 
-const SwapComponent = () => {
+interface SwapComponentProps {
+  fromToken: Token;
+  toToken: Token;
+  onTokenClick: (type: 'from' | 'to') => void;
+  onSwapTokens: () => void;
+}
+
+const SwapComponent = ({ fromToken, toToken, onTokenClick, onSwapTokens }: SwapComponentProps) => {
   return (
     <div className="flex-shrink-0 bg-[#000000]/50 h-min py-7 px-4 rounded-4xl gap-5 flex flex-col border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
       <Tabs defaultValue="buy" className="w-full">
@@ -191,10 +246,13 @@ const SwapComponent = () => {
       </Tabs>
 
       <div className="bg-[#1F1F1F] py-9 px-8 rounded-4xl flex items-center">
-        <div className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0">
-          <img className="size-5" src="https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png" alt="" />
-          <p className="text-sm font-bold">USDC</p>
-        </div>
+        <button
+          onClick={() => onTokenClick('from')}
+          className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
+        >
+          <img className="size-5" src={fromToken.image} alt={fromToken.symbol} />
+          <p className="text-sm font-bold">{fromToken.symbol}</p>
+        </button>
         
         <div className="flex-col flex justify-end items-end px-2 py-1 rounded-lg">
           <input
@@ -204,11 +262,26 @@ const SwapComponent = () => {
         </div>
       </div>
 
+      {/* Swap Button */}
+      <div className="flex justify-center">
+        <button
+          onClick={onSwapTokens}
+          className="bg-[#2A2A2A] hover:bg-[#3A3A3A] p-2 rounded-full transition-colors"
+        >
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+        </button>
+      </div>
+
       <div className="bg-[#1F1F1F] py-4 px-8 rounded-4xl flex items-center">
-        <div className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0">
-          <img className="size-5" src="https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png" alt="" />
-          <p className="text-sm font-bold">SOL</p>
-        </div>
+        <button
+          onClick={() => onTokenClick('to')}
+          className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
+        >
+          <img className="size-5" src={toToken.image} alt={toToken.symbol} />
+          <p className="text-sm font-bold">{toToken.symbol}</p>
+        </button>
         
         <div className="flex-col flex justify-end items-end px-2 py-1 rounded-lg">
           <input
