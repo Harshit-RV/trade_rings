@@ -134,7 +134,7 @@ const ManualTrade = () => {
         <Leaderboard />
       </div>
       
-      <div className="w-[30%]">
+      <div className="w-[35%]">
         <SwapComponent 
           fromToken={fromToken}
           toToken={toToken}
@@ -163,7 +163,11 @@ const ManualTrade = () => {
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
         </div>
-        <TradingViewWidget/>
+         <TradingViewWidget 
+           fromToken={fromToken.symbol} 
+           toToken={toToken.symbol} 
+           height={300}
+         />
       </div>
       
       {
