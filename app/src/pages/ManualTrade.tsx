@@ -377,19 +377,19 @@ const SwapComponent = ({ fromToken, toToken, onTokenClick, onSwapTokens, balance
               </button>
             ))}
           </div>
-      <div className="px-4 py-5">
+          <div className="px-4 py-5">
 
             <div>Slippage: {sliderValue} %</div>
-          <input
-          type="range"
-          min={0}
-          max={15}
-          step={0.25}
-          value={sliderValue}
-          onChange={(e) => setSliderValue(Number(e.target.value))}
-          className="w-full h-3 appearance-none bg-transparent"
-          aria-label="slider"
-          />
+            <input
+            type="range"
+            min={0}
+            max={15}
+            step={0.25}
+            value={sliderValue}
+            onChange={(e) => setSliderValue(Number(e.target.value))}
+            className="w-full h-3 appearance-none bg-transparent"
+            aria-label="slider"
+            />
       
           </div>
 
