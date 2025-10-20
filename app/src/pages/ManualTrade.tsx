@@ -13,8 +13,10 @@ import AnchorProgramService from "@/anchor-program/anchor-program-service";
 import TokenSelector from "@/components/TokenSelector";
 import type { Token } from "@/types/token";
 import { TOKENS } from "@/data/tokens";
+import HoldingsChart from "@/components/HoldingsChart";
 
 
+import TradingViewWidget from "@/components/PriceHistoryChart";
 const ManualTrade = () => {
   const { arenaId } = useParams();
   const { connection } = useConnection();
@@ -161,12 +163,14 @@ const ManualTrade = () => {
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
         </div>
+        <TradingViewWidget/>
       </div>
       
       {
         tradingAccount && (
-          <div className="absolute top-3 right-3  w-[20%]">
-            <Holdings tradingAccount={tradingAccount} openPositions={openPositions}/>
+          <div className="absolute top-3 right-3  w-[25%]">
+            <Holdings tradingAccount={tradingAccount?? null} openPositions={openPositions}/>
+            <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/>
           </div>
         )
       }
