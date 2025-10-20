@@ -7,7 +7,6 @@ import idl from "@/anchor-program/idl.json";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
 
 import { ArenaCardsList } from "@/components/arenaCardList";
-import { createArena, initializeRollupsService } from "@/lib/anchor_interactions";
 
 
 const ArenaList = () => {
@@ -56,12 +55,8 @@ const ArenaList = () => {
   }
 
   useEffect(() => {
-    if (program && wallet && connection) {
-      // Initialize the centralized service
-      initializeRollupsService(program, wallet, connection);
-    }
     setup();
-  }, [anchorProgramService, program, wallet, connection])
+  }, [anchorProgramService])
  
    arenas.map((arena,index)=>{return  {name:`Arena ${index+1}`,
     author: arena.creator?.toString(),
@@ -78,13 +73,11 @@ const ArenaList = () => {
             className="py-1 px-6 rounded cursor-pointer dark-glass" 
             onClick={async () => {
               try {
-                if (!program || !wallet || !connection) {
+                if (!anchorProgramService) {
                   console.error("Missing required data for creating arena");
                   return;
                 }
-                // Ensure service is initialized
-                initializeRollupsService(program, wallet, connection);
-                const txSig = await createArena();
+                const txSig = await anchorProgramService.createArena();
                 console.log("Arena created:", txSig);
                 // Refresh the arena list
                 setup();
