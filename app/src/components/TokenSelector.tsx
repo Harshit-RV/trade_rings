@@ -8,19 +8,27 @@ interface TokenSelectorProps {
   onSelectToken: (token: Token) => void;
   currentToken?: Token;
   tokens: Token[];
+  // Optional: balances by token symbol or address to show holdings in selector
+  balances?: Record<string, number>;
 }
 
-const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens }: TokenSelectorProps) => {
+const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens, balances }: TokenSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredTokens, setFilteredTokens] = useState<Token[]>(tokens);
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Filter tokens based on search term
   useEffect(() => {
+    const base = tokens.slice().sort((a, b) => {
+      const balA = (balances?.[a.symbol] ?? balances?.[a.address] ?? 0);
+      const balB = (balances?.[b.symbol] ?? balances?.[b.address] ?? 0);
+      return balB - balA; // tokens with balance first
+    });
+
     if (searchTerm.trim() === "") {
-      setFilteredTokens(tokens);
+      setFilteredTokens(base);
     } else {
-      const filtered = tokens.filter(
+      const filtered = base.filter(
         (token) =>
           token.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
           token.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -28,7 +36,7 @@ const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens }:
       );
       setFilteredTokens(filtered);
     }
-  }, [searchTerm, tokens]);
+  }, [searchTerm, tokens, balances]);
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -148,6 +156,9 @@ const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens }:
                   {/* Token Price */}
                   <div className="text-right">
                     <div className="font-semibold text-white">${token.price.toFixed(2)}</div>
+                    {typeof (balances?.[token.symbol] ?? balances?.[token.address]) === 'number' && (
+                      <div className="text-xs text-gray-400">qty {(balances?.[token.symbol] ?? balances?.[token.address] ?? 0).toLocaleString()}</div>
+                    )}
                   </div>
                 </button>
               ))}
