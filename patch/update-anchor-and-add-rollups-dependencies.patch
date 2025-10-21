@@ -1,0 +1,140 @@
+diff --git a/Anchor.toml b/Anchor.toml
+index 0276836..9bb1586 100644
+--- a/Anchor.toml
++++ b/Anchor.toml
+@@ -1,4 +1,5 @@
+ [toolchain]
++anchor_version = "0.31.1"
+ package_manager = "yarn"
+ 
+ [features]
+diff --git a/Cargo.lock b/Cargo.lock
+index a114ffa..396d7d8 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -541,11 +541,58 @@ dependencies = [
+  "subtle",
+ ]
+ 
++[[package]]
++name = "ephemeral-rollups-sdk"
++version = "0.2.12"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "625e231ca030fde0126389693a393baf1d1f9f764e7417185e9f3f0f7fe9c599"
++dependencies = [
++ "anchor-lang",
++ "borsh 1.5.7",
++ "ephemeral-rollups-sdk-attribute-commit",
++ "ephemeral-rollups-sdk-attribute-delegate",
++ "ephemeral-rollups-sdk-attribute-ephemeral",
++ "solana-program",
++]
++
++[[package]]
++name = "ephemeral-rollups-sdk-attribute-commit"
++version = "0.2.12"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "661e47aee1ed4137160107f956a65fb33db0c5073f52ee1231756e280accdd99"
++dependencies = [
++ "quote",
++ "syn 1.0.109",
++]
++
++[[package]]
++name = "ephemeral-rollups-sdk-attribute-delegate"
++version = "0.2.12"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5a2879070124e9b50d018d1e4135d86e34e13faab4a597bab0c3266f05fb0fa2"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 1.0.109",
++]
++
++[[package]]
++name = "ephemeral-rollups-sdk-attribute-ephemeral"
++version = "0.2.12"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f068f197b17e61812fe9cefc27d0d87ca22e3f17d328520189a7ca40531f34f4"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 1.0.109",
++]
++
+ [[package]]
+ name = "ephemeral_rollups"
+ version = "0.1.0"
+ dependencies = [
+  "anchor-lang",
++ "ephemeral-rollups-sdk",
+  "pyth-solana-receiver-sdk",
+ ]
+ 
+diff --git a/programs/ephemeral_rollups/Cargo.toml b/programs/ephemeral_rollups/Cargo.toml
+index 3e452d5..41b0ee0 100644
+--- a/programs/ephemeral_rollups/Cargo.toml
++++ b/programs/ephemeral_rollups/Cargo.toml
+@@ -18,6 +18,7 @@ idl-build = ["anchor-lang/idl-build"]
+ 
+ 
+ [dependencies]
+-anchor-lang = "0.31.0"
++anchor-lang = "0.31.1"
++ephemeral-rollups-sdk = { version = "0.2.12", features = ["anchor"] }
+ pyth-solana-receiver-sdk = "1.0.1"
+ 
+diff --git a/programs/ephemeral_rollups/src/lib.rs b/programs/ephemeral_rollups/src/lib.rs
+index 0a7ce1d..4baf588 100644
+--- a/programs/ephemeral_rollups/src/lib.rs
++++ b/programs/ephemeral_rollups/src/lib.rs
+@@ -1,6 +1,9 @@
+ use anchor_lang::prelude::*;
+ pub mod errors;
+ use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2};
++use ephemeral_rollups_sdk::anchor::{self, commit, delegate, ephemeral};
++use ephemeral_rollups_sdk::cpi::DelegateConfig;
++use ephemeral_rollups_sdk::ephem::commit_and_undelegate_accounts;
+ 
+ declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
+ 
+@@ -134,8 +137,39 @@ pub mod ephemeral_rollups {
+     pub fn close_all_positions(_ctx: Context<OpenPosition>) -> Result<()> {
+         Ok(())
+     }
++
++    pub fn delegate_game(ctx: Context<DelegateGame>) -> Result<()> {
++        let validator = ctx.accounts.validator.as_ref().map(|v| v.key());
++        ctx.accounts.delegate_pda(
++            &ctx.accounts.signer,
++            &[PROFILE_ACCOUNT_SEED, &ctx.accounts.signer.key().to_bytes()],
++            DelegateConfig {
++                validator,
++                ..Default::default()
++            },
++        )?;
++        Ok(())
++    }
+ }
+ 
++#[delegate]
++#[derive(Accounts)]
++#[instruction(game_id: u64)]
++pub struct DelegateGame<'info> {
++    pub signer: Signer<'info>,
++
++    /// CHECK: Checked by the delegate program
++    pub validator: Option<AccountInfo<'info>>,
++    
++    /// CHECK The pda to delegate
++    #[account(
++        mut, 
++        del,
++        seeds = [PROFILE_ACCOUNT_SEED, signer.key().as_ref()],
++        bump
++    )]
++    pub pda: AccountInfo<'info>,
++}
+ 
+ #[account]
+ #[derive(InitSpace)]
