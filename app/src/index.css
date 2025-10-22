@@ -127,3 +127,66 @@
   backdrop-filter: blur(10px);
 }
 /* bg-[rgba(95,95,95,0.3)] border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px] */
+
+.dark-glass {
+  background: rgba(0, 0,0,0.5);
+  /* box-shadow: 0 5px 5px rgba(255, 255, 255, 0.1); */
+  border: 0.1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  }
+  input[type=range]:focus { outline: none; }
+  
+  
+  /* Track (WebKit) */
+  input[type=range]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: white; /* slider color */
+  border-radius: 9999px;
+  }
+  
+  
+  /* Thumb (WebKit) */
+  input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px; /* round dragger size */
+  width: 20px;
+  border-radius: 50%;
+  background: white; /* dragger color */
+  margin-top: -7px; /* center the thumb vertically on the track */
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.06);
+  }
+  
+  
+  /* Firefox */
+  input[type=range]::-moz-range-track {
+  height: 6px;
+  background: white;
+  border-radius: 9999px;
+  }
+  input[type=range]::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  }
+  
+  
+  /* IE */
+  input[type=range]::-ms-track {
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+  height: 6px;
+  }
+  input[type=range]::-ms-fill-lower,
+  input[type=range]::-ms-fill-upper {
+  background: white;
+  border-radius: 9999px;
+  }
