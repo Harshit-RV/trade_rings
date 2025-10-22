@@ -1,21 +1,28 @@
-import { useState, useEffect, useRef } from "react";
-import { X, Search } from "lucide-react";
+import { useState, useEffect, type ReactNode } from "react";
+import { Search } from "lucide-react";
 import type { Token } from "@/types/token";
+import {
+  Dialog,
+  DialogContent,
+  // DialogHeader,
+  // DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 interface TokenSelectorProps {
-  isOpen: boolean;
-  onClose: () => void;
+  children: ReactNode
   onSelectToken: (token: Token) => void;
   currentToken?: Token;
   tokens: Token[];
+
   // Optional: balances by token symbol or address to show holdings in selector
   balances?: Record<string, number>;
 }
 
-const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens, balances }: TokenSelectorProps) => {
+const TokenSelector = ({ children, onSelectToken, currentToken, tokens, balances }: TokenSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredTokens, setFilteredTokens] = useState<Token[]>(tokens);
-  const modalRef = useRef<HTMLDivElement>(null);
 
   // Filter tokens based on search term
   useEffect(() => {
@@ -38,69 +45,22 @@ const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens, b
     }
   }, [searchTerm, tokens, balances]);
 
-  // Close modal when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.body.style.overflow = "hidden"; // Prevent background scrolling
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen, onClose]);
-
-  // Close modal on escape key
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-    }
-
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen, onClose]);
 
   const handleTokenSelect = (token: Token) => {
     onSelectToken(token);
-    onClose();
     setSearchTerm(""); // Clear search when closing
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div
-        ref={modalRef}
-        className="bg-[#1F1F1F] rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[rgba(255,255,255,0.1)]">
-          <h2 className="text-lg font-bold text-white">Select a token</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-[#2A2A2A] rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-400" />
-          </button>
-        </div>
+    <Dialog>
+      <DialogTrigger asChild>
+        {children}
+      </DialogTrigger>
 
+      <DialogContent className="bg-[#1F1F1F] rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px] p-0">
+       
         {/* Search Bar */}
-        <div className="p-6 pb-4">
+        <div className="p-6 pb-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -118,13 +78,13 @@ const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens, b
           {filteredTokens.length > 0 ? (
             <div className="space-y-2">
               {filteredTokens.map((token, index) => (
-                <button
-                  key={`${token.symbol}-${index}`}
-                  onClick={() => handleTokenSelect(token)}
-                  className={`w-full flex items-center justify-between p-4 rounded-xl hover:bg-[#2A2A2A] transition-colors ${
-                    currentToken?.symbol === token.symbol ? "bg-[#2A2A2A] border border-[#00C9C8]" : ""
-                  }`}
-                >
+                <DialogClose asChild key={`${token.symbol}-${index}`}>
+                  <button
+                    onClick={() => handleTokenSelect(token)}
+                    className={`w-full flex items-center justify-between p-4 rounded-xl hover:bg-[#2A2A2A] transition-colors ${
+                      currentToken?.symbol === token.symbol ? "bg-[#2A2A2A] border border-[#00C9C8]" : ""
+                    }`}
+                  >
                   <div className="flex items-center gap-3">
                     {/* Token Icon */}
                     <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
@@ -138,7 +98,7 @@ const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens, b
                           target.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm hidden">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 items-center justify-center text-white font-bold text-sm hidden">
                         {token.symbol.charAt(0)}
                       </div>
                     </div>
@@ -160,7 +120,8 @@ const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens, b
                       <div className="text-xs text-gray-400">qty {(balances?.[token.symbol] ?? balances?.[token.address] ?? 0).toLocaleString()}</div>
                     )}
                   </div>
-                </button>
+                  </button>
+                </DialogClose>
               ))}
             </div>
           ) : (
@@ -170,8 +131,9 @@ const TokenSelector = ({ isOpen, onClose, onSelectToken, currentToken, tokens, b
             </div>
           )}
         </div>
-      </div>
-    </div>
+
+      </DialogContent>
+    </Dialog>
   );
 };
 

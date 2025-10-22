@@ -14,6 +14,7 @@ import type { Token } from "@/types/token";
 import { TOKENS } from "@/data/tokens";
 import HoldingsChart from "@/components/HoldingsChart";
 import { IoSwapVertical } from "react-icons/io5";
+import TokenSelector from "@/components/TokenSelector";
 
 // import TradingViewWidget from "@/components/PriceHistoryChart";
 // import BotTrading from "@/components/BotTrading";
@@ -101,9 +102,6 @@ const ManualTrade = () => {
   }, [tradingAccount, openPositions]);
 
 
-
-
-
   const handleSwapTransaction = (tx: SwapTransaction) => {
     console.log(tx);
   };
@@ -134,22 +132,12 @@ const ManualTrade = () => {
       
       {
         tradingAccount && (
-          <div className="absolute top-3 right-3  w-[25%]">
+          <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
             <Holdings tradingAccount={tradingAccount?? null} openPositions={openPositions}/>
             <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/>
           </div>
         )
       }
-      
-      {/* Token Selector Modal - balances only for selling (from) side */}
-      {/* <TokenSelector
-        isOpen={isTokenSelectorOpen}
-        onClose={handleCloseTokenSelector}
-        onSelectToken={handleTokenSelect}
-        currentToken={selectedTokenType === 'from' ? fromToken : toToken}
-        tokens={TOKENS}
-        balances={selectedTokenType === 'from' ? balances : undefined}
-      /> */}
     </div>
   )
 }
@@ -237,7 +225,6 @@ const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: Trading
 };
 
 interface SwapComponentProps {
-  // onTokenClick: (type: 'from' | 'to') => void;
   balances: Record<string, number>;
   swapHandler: (tx: SwapTransaction) => void;
 }
@@ -282,15 +269,22 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
           </TabsTrigger>
         </TabsList>
       </Tabs> */}
+
       <div className="flex flex-col gap-2">
         <div className="bg-primary-background py-12 px-8 rounded-4xl flex items-center">
-          <button
-            // onClick={() => onTokenClick('to')}
-            className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
+          
+          <TokenSelector
+            onSelectToken={(newToToken) => setSwapTransaction((v) => {
+              return {...v, toToken: newToToken}
+            })}
+            currentToken={swapTransaction.toToken}
+            tokens={TOKENS}
           >
-            <img className="size-5" src={swapTransaction.toToken.image} alt={swapTransaction.toToken.symbol} />
-            <p className="text-sm font-bold">{swapTransaction.toToken.symbol}</p>
-          </button>
+            <Button className="bg-black hover:bg-[#1A1A1A] flex-shrink-0 px-6 text-white rounded-xl gap-2">
+              <img className="size-5" src={swapTransaction.toToken.image} alt={swapTransaction.toToken.symbol} />
+              <p className="text-sm font-bold">{swapTransaction.toToken.symbol}</p>
+            </Button>
+          </TokenSelector>
           
           <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
             <input
@@ -316,13 +310,20 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
         </div>
 
         <div className="bg-primary-background py-7 px-8 rounded-4xl flex items-center">
-          <button
-            // onClick={() => onTokenClick('from')}
-            className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
+          
+          <TokenSelector
+            onSelectToken={(newFromToken) => setSwapTransaction((v) => {
+              return {...v, fromToken: newFromToken}
+            })}
+            currentToken={swapTransaction.fromToken}
+            tokens={TOKENS}
           >
-            <img className="size-5" src={swapTransaction.fromToken.image} alt={swapTransaction.fromToken.symbol} />
-            <p className="text-sm font-bold">{swapTransaction.fromToken.symbol}</p>
-          </button>
+            <Button className="bg-black hover:bg-[#1A1A1A] flex-shrink-0 px-6 text-white rounded-xl gap-2">
+              <img className="size-5" src={swapTransaction.fromToken.image} alt={swapTransaction.fromToken.symbol} />
+              <p className="text-sm font-bold">{swapTransaction.fromToken.symbol}</p>
+            </Button>
+          </TokenSelector>
+          
           
           <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
             <input
