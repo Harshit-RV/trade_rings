@@ -58,32 +58,11 @@ const ArenaList = () => {
   }, [anchorProgramService])
  
    
-    
   return (
     <div className="flex flex-col items-center justify-center py-10 px-8 gap-4">
-      <div className="flex justify-between w-full mb-0 items-end px-3 translate-y-2">
-          <span>Arenas</span>
-          <button 
-            className="py-1 px-6 rounded cursor-pointer dark-glass" 
-            onClick={async () => {
-              try {
-                if (!anchorProgramService) {
-                  console.error("Missing required data for creating arena");
-                  return;
-                }
-                const txSig = await anchorProgramService.createArena();
-                console.log("Arena created:", txSig);
-                // Refresh the arena list
-                setup();
-              } catch (error) {
-                console.error("Error creating arena:", error);
-              }
-            }}
-          >
-            New +
-          </button>
+      <div className="flex w-full pl-1">
+          <span className="text-xl font-bold">Arenas</span>
       </div>
-      <span className="mt-0 bg-white h-[1px] w-full"></span>
 
       {
         arenas && arenas.length > 0 && (
