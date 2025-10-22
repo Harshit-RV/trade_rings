@@ -1,6 +1,5 @@
 
 import { Button } from "@/components/ui/button";
-// import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useState } from "react";
 import { TOKENS } from "@/data/tokens";
 import { IoSwapVertical } from "react-icons/io5";
@@ -35,23 +34,6 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
   
   return (
     <div className="flex-shrink-0 bg-[#000000]/50 h-min py-7 px-5 rounded-[50px] gap-5 flex flex-col border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      
-      {/* <Tabs defaultValue="buy" className="w-full">
-        <TabsList className="w-full h-10">
-          <TabsTrigger 
-            className="w-1/2 border-none font-bold hover:cursor-pointer dark:data-[state=active]:bg-[#222D2E] dark:data-[state=active]:text-[#02C178] h-[calc(100%+1px)]" 
-            value="buy"
-          >
-            Buy
-          </TabsTrigger>
-          <TabsTrigger 
-            className="w-1/2 border-none font-bold hover:cursor-pointer dark:data-[state=active]:bg-[#39252A] dark:data-[state=active]:text-[#FA4B4E] h-[calc(100%+1px)]"
-            value="sell"
-          >
-            Sell
-          </TabsTrigger>
-        </TabsList>
-      </Tabs> */}
 
       <div className="flex flex-col gap-2">
         <div className="bg-primary-background py-12 px-8 rounded-4xl flex items-center">
@@ -141,20 +123,7 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
         </div>
       </div>
           
-      {/* TODO: Add slippage slider */}
-      {/* <div className="px-4 py-0 text-xs">
-        <div>Slippage: {sliderValue} %</div>
-        <input
-          type="range"
-          min={0}
-          max={15}
-          step={0.25}
-          value={sliderValue}
-          onChange={(e) => setSliderValue(Number(e.target.value))}
-          className="w-full h-1 bg-primary-background"
-          aria-label="slider"
-        />
-      </div> */}
+      {/* TODO: Add slippage input */}
 
       <Button onClick={() => swapHandler(swapTransaction)} className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold">Swap</Button>
     </div>

@@ -16,9 +16,6 @@ import Holdings from "@/components/main-tiles/Holdings";
 import Leaderboard from "@/components/main-tiles/Leaderboard";
 import type { SwapTransaction } from "@/types/types";
 
-// import TradingViewWidget from "@/components/PriceHistoryChart";
-// import BotTrading from "@/components/BotTrading";
-
 
 const ManualTrade = () => {
   const { arenaId } = useParams();
@@ -110,17 +107,6 @@ const ManualTrade = () => {
           swapHandler={handleSwapTransaction}
           balances={balances}
         />
-         {/* 
-        <div className="flex gap-4 pt-4">
-          <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
-          <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
-        </div>
-         <TradingViewWidget 
-           fromToken={fromToken.symbol} 
-           toToken={toToken.symbol} 
-           height={300}
-         />
-         <BotTrading/> */}
       </div>
       
       {
