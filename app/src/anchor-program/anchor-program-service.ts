@@ -64,6 +64,24 @@ class AnchorProgramService {
     }
   };
 
+  // TODO: add try catch, refactor, check if this is correct
+  createArena = async (): Promise<string> => {
+    // Create a new arena, mirroring logic from anchor_interactions
+    const transaction = await this.program.methods
+      .adminFnCreateArena()
+      .transaction();
+
+    transaction.feePayer = this.wallet.publicKey;
+    // Use the provider's connection attached to the Program instance
+    const connection = (this.program.provider as unknown as { connection: { getLatestBlockhash: () => Promise<{ blockhash: string }>; sendRawTransaction: (raw: Buffer | Uint8Array) => Promise<string> } }).connection;
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+    // Wallet provided by Anchor has signTransaction
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const signedTx = await (this.wallet as any).signTransaction(transaction);
+    return connection.sendRawTransaction(signedTx.serialize());
+  }
+
   fetchOpenPositionsForTradingAccount = async (tradingAccount: TradingAccountForArena): Promise<OpenPositionAccount[] | null> => {
     try {
       const positions: OpenPositionAccount[] = [];
