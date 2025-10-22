@@ -3,15 +3,16 @@ import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import type { EphemeralRollups } from "@/anchor-program/types";
 import idl from "@/anchor-program/idl.json";
-import AnchorProgramService, { type ArenaAccount } from "@/anchor-program/anchor-program-service";
-import { Link } from "react-router";
+import AnchorProgramService from "@/anchor-program/anchor-program-service";
+import { ArenaCard } from "@/components/ArenaCard.tsx";
 
 
 const ArenaList = () => {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
 
-  const [ arenas, setArenas ] = useState<ArenaAccount[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [ arenas, setArenas ] = useState<any[]>([])
 
   const provider = useMemo(() => {
     if (!wallet) return null;
@@ -39,7 +40,13 @@ const ArenaList = () => {
       const arenaList = await anchorProgramService.fetchUserArenas();
 
       if (!arenaList) return
-      setArenas(arenaList)
+      const arenaListTemp=arenaList!.map((arena,index)=>{return  {name:`Arena ${index+1}`,
+      author:arena.creator.toString(),
+      timeline:"15, Oct - 31, Oct",
+      link:`/trade/${arena.selfkey}`,
+      status:"Registered",
+      people:500}})
+      setArenas(arenaListTemp)
 
     } catch (error) {
       console.error("Error in setup:", error);
@@ -49,20 +56,30 @@ const ArenaList = () => {
   useEffect(() => {
     setup();
   }, [anchorProgramService])
-
+ 
+   
   return (
     <div className="flex flex-col items-center justify-center py-10 px-8 gap-4">
+      <div className="flex w-full pl-1">
+          <span className="text-xl font-bold">Arenas</span>
+      </div>
 
       {
-        arenas.map((arena, index) => (
-          <Link to={`/trade/${arena.selfkey}`} key={index}>
-            <div className="py-6 px-6 rounded-2xl bg-[#000000]/65">
-              <p className="font-medium">Arena #{index + 1}</p>
-              <p className="text-sm mt-4">Creator: {arena.creator.toString()}</p>
-              <p className="text-sm">Bump: {arena.bump}</p>
-            </div>
-          </Link>
-        ))
+        arenas && arenas.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {arenas.map((card, idx) => (
+              <ArenaCard 
+                key={idx} 
+                name={card.name} 
+                author={card.author} 
+                timeline={card.timeline} 
+                link={card.link} 
+                people={card.people} 
+                status={card.status} 
+              />
+            ))}
+          </div>
+        )
       }
 
       {
@@ -77,3 +94,4 @@ const ArenaList = () => {
 
 
 export default ArenaList;
+

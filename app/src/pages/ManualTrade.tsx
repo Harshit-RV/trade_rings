@@ -1,8 +1,7 @@
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
-import { AnchorProvider, BN, Program, setProvider } from "@coral-xyz/anchor";
+import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import type { EphemeralRollups } from "@/anchor-program/types";
@@ -10,6 +9,12 @@ import idl from "@/anchor-program/idl.json";
 import { MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
 import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
+import { TOKENS } from "@/data/tokens";
+import HoldingsChart from "@/components/HoldingsChart";
+import SwapComponent from "@/components/main-tiles/SwapComponent";
+import Holdings from "@/components/main-tiles/Holdings";
+import Leaderboard from "@/components/main-tiles/Leaderboard";
+import type { SwapTransaction } from "@/types/types";
 
 
 const ManualTrade = () => {
@@ -19,7 +24,7 @@ const ManualTrade = () => {
 
   const [ tradingAccount, setTradingAccount ] = useState<TradingAccountForArena | null>(null);
   const [ openPositions, setOpenPositions ] = useState<OpenPositionAccount[]>([]);
-
+  
   const provider = useMemo(() => {
     if (!wallet) return null;
     return new AnchorProvider(connection, wallet, { commitment: "processed" });
@@ -62,166 +67,59 @@ const ManualTrade = () => {
     setup();
   }, [arenaId, program, wallet])
 
+  // Compute balances from tradingAccount and openPositions
+  const balances = useMemo(() => {
+    // Seed demo balances for all known tokens (for UI testing)
+    const demo: Record<string, number> = {};
+    TOKENS.forEach(t => {
+      // Keep a stable pseudo-random per symbol across renders
+      const seed = Array.from(t.symbol).reduce((a, c) => a + c.charCodeAt(0), 0);
+      const pseudo = (Math.sin(seed) + 1) / 2; // 0..1
+      demo[t.symbol] = Number((pseudo * 250).toFixed(2));
+    });
+
+    // Overlay real balances if available
+    if (tradingAccount) {
+      demo['USDC'] = Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD;
+    }
+    if (openPositions && openPositions.length > 0) {
+      for (const pos of openPositions) {
+        const qty = Number(pos.quantityRaw) / QUANTITY_SCALING_FACTOR;
+        demo[pos.asset] = (demo[pos.asset] ?? 0) + qty;
+      }
+    }
+    return demo;
+  }, [tradingAccount, openPositions]);
+
+
+  const handleSwapTransaction = (tx: SwapTransaction) => {
+    console.log(tx);
+  };
+
   return (
     <div className="flex relative items-start justify-center pt-20 px-8 gap-6">
       <div className="absolute top-3 left-3 w-[15%]">
         <Leaderboard />
       </div>
       
-      <div className="w-[30%]">
-        <SwapComponent />
-        <div className="flex gap-4 pt-4">
-          <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
-          <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
-        </div>
+      <div className="w-[35%]">
+        <SwapComponent 
+          swapHandler={handleSwapTransaction}
+          balances={balances}
+        />
       </div>
       
       {
         tradingAccount && (
-          <div className="absolute top-3 right-3  w-[20%]">
+          <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
             <Holdings tradingAccount={tradingAccount} openPositions={openPositions}/>
+            <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/>
           </div>
         )
       }
-      
     </div>
   )
 }
-
-const Leaderboard = () => {
-  const leaderboardData = Array.from({ length: 10 }, () => ({
-    person: "Harshit.ror",
-    balance: "$500"
-  }));
-
-  return (
-    <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      <h2 className="text-md font-bold mb-4">Leaderboard</h2>
-      <div className="text-4xl font-bold mb-6">#1</div>
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm font-medium text-gray-400 mb-3">
-          <span>Person</span>
-          <span>Balance</span>
-        </div>
-        {leaderboardData.map((item, index) => (
-          <div key={index} className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <img className="size-4" src="https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png" alt="USDC" />
-              <span className="text-sm">{item.person}</span>
-            </div>
-            <span className="text-sm font-medium">{item.balance}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: TradingAccountForArena, openPositions: OpenPositionAccount[] } ) => {
-  const getAssetIcon = (asset: string) => {
-    switch (asset.toLowerCase()) {
-      case 'usdc':
-        return "https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png";
-      case 'sol':
-        return "https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png";
-      default:
-        return "https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png";
-    }
-  };
-
-  const formatQuantity = (quantityRaw: BN) => {
-    const quantity = Number(quantityRaw) / QUANTITY_SCALING_FACTOR;
-    return quantity.toFixed(2);
-  };
-
-  return (
-    <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      <h2 className="text-md font-bold mb-4">Your Holdings</h2>
-      <div className="text-2xl font-bold mb-6 bg-[#1F1F1F] p-2 rounded-lg">
-        $ {(Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD).toLocaleString('en-US')}
-      </div>
-      <div className="space-y-2">
-        
-        <div className="flex justify-between text-sm font-medium text-gray-400 mb-3">
-          <span>Asset</span>
-          <span>Quantity</span>
-          <span>Value</span>
-        </div>
-        
-        {openPositions.length > 0 ? (
-          openPositions.map((position, index) => (
-            <div key={index} className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <img className="size-4" src={getAssetIcon(position.asset)} alt={position.asset} />
-                <span className="text-sm">{position.asset}</span>
-              </div>
-              <span className="text-sm">{formatQuantity(position.quantityRaw)}</span>
-              <span className="text-sm font-medium">TODO</span>
-            </div>
-          ))
-        ) : (
-          <div className="text-center text-gray-400 py-4">
-            <p className="text-sm">No open positions</p>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
-};
-
-const SwapComponent = () => {
-  return (
-    <div className="flex-shrink-0 bg-[#000000]/50 h-min py-7 px-4 rounded-4xl gap-5 flex flex-col border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      <Tabs defaultValue="buy" className="w-full">
-        <TabsList className="w-full h-10">
-          <TabsTrigger 
-            className="w-1/2 border-none font-bold hover:cursor-pointer dark:data-[state=active]:bg-[#222D2E] dark:data-[state=active]:text-[#02C178] h-[calc(100%+1px)]" 
-            value="buy"
-          >
-            Buy
-          </TabsTrigger>
-          <TabsTrigger 
-            className="w-1/2 border-none font-bold hover:cursor-pointer dark:data-[state=active]:bg-[#39252A] dark:data-[state=active]:text-[#FA4B4E] h-[calc(100%+1px)]"
-            value="sell"
-          >
-            Sell
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="bg-[#1F1F1F] py-9 px-8 rounded-4xl flex items-center">
-        <div className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0">
-          <img className="size-5" src="https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png" alt="" />
-          <p className="text-sm font-bold">USDC</p>
-        </div>
-        
-        <div className="flex-col flex justify-end items-end px-2 py-1 rounded-lg">
-          <input
-            placeholder="0.0"
-            className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
-          />
-        </div>
-      </div>
-
-      <div className="bg-[#1F1F1F] py-4 px-8 rounded-4xl flex items-center">
-        <div className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0">
-          <img className="size-5" src="https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png" alt="" />
-          <p className="text-sm font-bold">SOL</p>
-        </div>
-        
-        <div className="flex-col flex justify-end items-end px-2 py-1 rounded-lg">
-          <input
-            placeholder="0.0"
-            className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
-          />
-        </div>
-      </div>
-
-      <Button className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold">Swap</Button>
-    </div>
-  );
-};
 
 
 export default ManualTrade;

@@ -2,10 +2,10 @@ import { AnchorProvider, BN, Program, setProvider } from "@coral-xyz/anchor";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import type { EphemeralRollups } from "../anchor-program/types";
 import idl from "../anchor-program/idl.json";
-import Button from "../ui/button";
 import { PublicKey } from "@solana/web3.js";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
 
 
 interface UserProfile {
