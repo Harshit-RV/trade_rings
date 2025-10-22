@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { AnchorProvider, BN, Program, setProvider } from "@coral-xyz/anchor";
@@ -10,14 +10,22 @@ import idl from "@/anchor-program/idl.json";
 import { MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
 import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
-import TokenSelector from "@/components/TokenSelector";
 import type { Token } from "@/types/token";
 import { TOKENS } from "@/data/tokens";
 import HoldingsChart from "@/components/HoldingsChart";
+import { IoSwapVertical } from "react-icons/io5";
 
+// import TradingViewWidget from "@/components/PriceHistoryChart";
+// import BotTrading from "@/components/BotTrading";
 
-import TradingViewWidget from "@/components/PriceHistoryChart";
-import BotTrading from "@/components/BotTrading";
+interface SwapTransaction {
+  fromToken: Token;
+  toToken: Token;
+  fromAmount: number;
+  toAmount: number;
+  slippagePercent: number;
+}
+
 const ManualTrade = () => {
   const { arenaId } = useParams();
   const { connection } = useConnection();
@@ -25,14 +33,6 @@ const ManualTrade = () => {
 
   const [ tradingAccount, setTradingAccount ] = useState<TradingAccountForArena | null>(null);
   const [ openPositions, setOpenPositions ] = useState<OpenPositionAccount[]>([]);
-  
-  // Token selector state
-  const [ isTokenSelectorOpen, setIsTokenSelectorOpen ] = useState(false);
-  const [ selectedTokenType, setSelectedTokenType ] = useState<'from' | 'to' | null>(null);
-  const [ fromToken, setFromToken ] = useState<Token>(TOKENS[0]); // Default to USDC
-  const [ toToken, setToToken ] = useState<Token>(TOKENS[1]); // Default to SOL
-  const [ fromAmount, setFromAmount ] = useState<string>("");
-  const [ toAmount, setToAmount ] = useState<string>("");
   
   const provider = useMemo(() => {
     if (!wallet) return null;
@@ -100,33 +100,12 @@ const ManualTrade = () => {
     return demo;
   }, [tradingAccount, openPositions]);
 
-  // Token selection handlers
-  const handleTokenClick = (type: 'from' | 'to') => {
-    setSelectedTokenType(type);
-    setIsTokenSelectorOpen(true);
-  };
 
-  const handleTokenSelect = (token: Token) => {
-    if (selectedTokenType === 'from') {
-      setFromToken(token);
-    } else if (selectedTokenType === 'to') {
-      setToToken(token);
-    }
-    setIsTokenSelectorOpen(false);
-    setSelectedTokenType(null);
-  };
 
-  const handleCloseTokenSelector = () => {
-    setIsTokenSelectorOpen(false);
-    setSelectedTokenType(null);
-  };
 
-  const handleSwapTokens = () => {
-    setFromToken(toToken);
-    setToToken(fromToken);
-    // swap amounts as well
-    setFromAmount(toAmount);
-    setToAmount(fromAmount);
+
+  const handleSwapTransaction = (tx: SwapTransaction) => {
+    console.log(tx);
   };
 
   return (
@@ -137,28 +116,8 @@ const ManualTrade = () => {
       
       <div className="w-[35%]">
         <SwapComponent 
-          fromToken={fromToken}
-          toToken={toToken}
-          onTokenClick={handleTokenClick}
-          onSwapTokens={handleSwapTokens}
+          swapHandler={handleSwapTransaction}
           balances={balances}
-          fromAmount={fromAmount}
-          toAmount={toAmount}
-          onFromChange={(v) => {
-            const max = balances[fromToken.symbol] ?? 0;
-            if (v === "") { setFromAmount(""); return; }
-            const num = Number(v);
-            if (Number.isNaN(num)) return;
-            const clamped = Math.min(Math.max(0, num), max);
-            setFromAmount(clamped.toString());
-          }}
-          onToChange={(v) => {
-            if (v === "") { setToAmount(""); return; }
-            const num = Number(v);
-            if (Number.isNaN(num)) return;
-            const clamped = Math.max(0, num);
-            setToAmount(clamped.toString());
-          }}
         />
          {/* 
         <div className="flex gap-4 pt-4">
@@ -183,14 +142,14 @@ const ManualTrade = () => {
       }
       
       {/* Token Selector Modal - balances only for selling (from) side */}
-      <TokenSelector
+      {/* <TokenSelector
         isOpen={isTokenSelectorOpen}
         onClose={handleCloseTokenSelector}
         onSelectToken={handleTokenSelect}
         currentToken={selectedTokenType === 'from' ? fromToken : toToken}
         tokens={TOKENS}
         balances={selectedTokenType === 'from' ? balances : undefined}
-      />
+      /> */}
     </div>
   )
 }
@@ -278,22 +237,36 @@ const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: Trading
 };
 
 interface SwapComponentProps {
-  fromToken: Token;
-  toToken: Token;
-  onTokenClick: (type: 'from' | 'to') => void;
-  onSwapTokens: () => void;
+  // onTokenClick: (type: 'from' | 'to') => void;
   balances: Record<string, number>;
-  fromAmount: string;
-  toAmount: string;
-  onFromChange: (v: string) => void;
-  onToChange: (v: string) => void;
+  swapHandler: (tx: SwapTransaction) => void;
 }
 
-const SwapComponent = ({ fromToken, toToken, onTokenClick, onSwapTokens, balances, fromAmount, toAmount, onFromChange, onToChange }: SwapComponentProps) => {
-  const [ sliderValue, setSliderValue ] = useState<number>(5);
+const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
+  
+  const [ swapTransaction, setSwapTransaction ] = useState<SwapTransaction>({
+    fromToken: TOKENS[0],
+    toToken: TOKENS[1],
+    fromAmount: 0,
+    toAmount: 0,
+    slippagePercent: 0,
+  });
+
+
+  const handleSwapTokens = () => {
+    setSwapTransaction({
+      fromToken: swapTransaction.toToken,
+      toToken: swapTransaction.fromToken,
+      fromAmount: Number(swapTransaction.toAmount),
+      toAmount: Number(swapTransaction.fromAmount),
+      slippagePercent: swapTransaction.slippagePercent,
+    });
+  };
+  
   return (
-    <div className="flex-shrink-0 bg-[#000000]/50 h-min py-7 px-4 rounded-4xl gap-5 flex flex-col border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      <Tabs defaultValue="buy" className="w-full">
+    <div className="flex-shrink-0 bg-[#000000]/50 h-min py-7 px-5 rounded-[50px] gap-5 flex flex-col border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
+      
+      {/* <Tabs defaultValue="buy" className="w-full">
         <TabsList className="w-full h-10">
           <TabsTrigger 
             className="w-1/2 border-none font-bold hover:cursor-pointer dark:data-[state=active]:bg-[#222D2E] dark:data-[state=active]:text-[#02C178] h-[calc(100%+1px)]" 
@@ -308,103 +281,98 @@ const SwapComponent = ({ fromToken, toToken, onTokenClick, onSwapTokens, balance
             Sell
           </TabsTrigger>
         </TabsList>
-      </Tabs>
-
-      <div className="bg-[#1F1F1F] py-4 px-8 rounded-2xl flex items-center">
-        <button
-          onClick={() => onTokenClick('to')}
-          className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
-        >
-          <img className="size-5" src={toToken.image} alt={toToken.symbol} />
-          <p className="text-sm font-bold">{toToken.symbol}</p>
-        </button>
-        
-        <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
-          <input
-            placeholder="0.0"
-            inputMode="decimal"
-            pattern="[0-9]*[.,]?[0-9]*"
-            value={toAmount}
-            onChange={(e) => onToChange(e.target.value.replace(/,/g, '.'))}
-            className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
-          />
-          {/* Receiving side does not show max */}
-        </div>
-      </div>
-      {/* Swap Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={onSwapTokens}
-          className="bg-[#2A2A2A] hover:bg-[#3A3A3A] p-2 rounded-full transition-colors"
-        >
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-          </svg>
-        </button>
-      </div>
-
-
-
-      <div className="bg-[#1F1F1F] py-3 px-8 rounded-2xl flex items-center">
-        <button
-          onClick={() => onTokenClick('from')}
-          className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
-        >
-          <img className="size-5" src={fromToken.image} alt={fromToken.symbol} />
-          <p className="text-sm font-bold">{fromToken.symbol}</p>
-        </button>
-        
-        <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
-          <input
-            placeholder="0.0"
-            inputMode="decimal"
-            pattern="[0-9]*[.,]?[0-9]*"
-            value={fromAmount}
-            onChange={(e) => onFromChange(e.target.value.replace(/,/g, '.'))}
-            className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
-          />
-          {/* Max balance hint */}
-          <div className="text-xs text-gray-400 pt-1 w-full text-right">Max: {(balances[fromToken.symbol] ?? 0).toLocaleString()}</div>
-
+      </Tabs> */}
+      <div className="flex flex-col gap-2">
+        <div className="bg-primary-background py-12 px-8 rounded-4xl flex items-center">
+          <button
+            // onClick={() => onTokenClick('to')}
+            className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
+          >
+            <img className="size-5" src={swapTransaction.toToken.image} alt={swapTransaction.toToken.symbol} />
+            <p className="text-sm font-bold">{swapTransaction.toToken.symbol}</p>
+          </button>
           
+          <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
+            <input
+              placeholder="0.0"
+              inputMode="decimal"
+              pattern="[0-9]*[.,]?[0-9]*"
+              value={swapTransaction.toAmount}
+              onChange={(e) => setSwapTransaction({ ...swapTransaction, toAmount: Number(e.target.value.replace(/,/g, '.')) })}
+              className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
+            />
+            {/* Receiving side does not show max */}
+          </div>
         </div>
         
-      </div>
+        {/* Swap Button */}
+        <div className="flex justify-center">
+          <button
+            onClick={() => handleSwapTokens()}
+            className="bg-[#2A2A2A] hover:bg-[#3A3A3A] p-2 rounded-full transition-colors"
+          >
+            <IoSwapVertical />
+          </button>
+        </div>
 
-      {/* Quick percent buttons */}
-      <div className="flex pt-2 w-full justify-center gap-7">
-            {[10,25,50,100].map(p => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  const max = balances[fromToken.symbol] ?? 0;
-                  const val = ((p/100) * max);
-                  onFromChange(val.toFixed(6));
-                }}
-                className="text-sm px-5 py-2 rounded-lg bg-[#2A2A2A] hover:bg-[#3A3A3A]"
-              >
-                {p}%
-              </button>
-            ))}
-          </div>
-          <div className="px-4 py-5">
-
-            <div>Slippage: {sliderValue} %</div>
+        <div className="bg-primary-background py-7 px-8 rounded-4xl flex items-center">
+          <button
+            // onClick={() => onTokenClick('from')}
+            className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
+          >
+            <img className="size-5" src={swapTransaction.fromToken.image} alt={swapTransaction.fromToken.symbol} />
+            <p className="text-sm font-bold">{swapTransaction.fromToken.symbol}</p>
+          </button>
+          
+          <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
             <input
-            type="range"
-            min={0}
-            max={15}
-            step={0.25}
-            value={sliderValue}
-            onChange={(e) => setSliderValue(Number(e.target.value))}
-            className="w-full h-3 appearance-none bg-transparent"
-            aria-label="slider"
+              placeholder="0.0"
+              inputMode="decimal"
+              pattern="[0-9]*[.,]?[0-9]*"
+              value={swapTransaction.fromAmount}
+              onChange={(e) => setSwapTransaction({ ...swapTransaction, fromAmount: Number(e.target.value.replace(/,/g, '.')) })}
+              className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
             />
-      
+            {/* Max balance hint */}
+            <div className="text-xs text-gray-400 pt-1 w-full text-right">Max: {(balances[swapTransaction.fromToken.symbol] ?? 0).toLocaleString()}</div>
           </div>
+        </div>
 
-      <Button className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold">Swap</Button>
+        {/* Quick percent buttons */}
+        <div className="flex w-full justify-end gap-2">
+          {[10,25,50,100].map(p => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => {
+                const max = balances[swapTransaction.fromToken.symbol] ?? 0;
+                const val = ((p/100) * max);
+                setSwapTransaction({ ...swapTransaction, fromAmount: Number(val.toFixed(6)) });
+              }}
+              className="text-xs px-4 py-2 rounded-lg bg-[#2A2A2A] hover:bg-[#3A3A3A]"
+            >
+              {p}%
+            </button>
+          ))}
+        </div>
+      </div>
+          
+      {/* TODO: Add slippage slider */}
+      {/* <div className="px-4 py-0 text-xs">
+        <div>Slippage: {sliderValue} %</div>
+        <input
+          type="range"
+          min={0}
+          max={15}
+          step={0.25}
+          value={sliderValue}
+          onChange={(e) => setSliderValue(Number(e.target.value))}
+          className="w-full h-1 bg-primary-background"
+          aria-label="slider"
+        />
+      </div> */}
+
+      <Button onClick={() => swapHandler(swapTransaction)} className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold">Swap</Button>
     </div>
   );
 };
