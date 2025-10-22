@@ -3,10 +3,8 @@ import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import type { EphemeralRollups } from "@/anchor-program/types";
 import idl from "@/anchor-program/idl.json";
-//import AnchorProgramService, { type ArenaAccount } from "@/anchor-program/anchor-program-service";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
-
-import { ArenaCardsList } from "@/components/arenaCardList";
+import { ArenaCard } from "@/components/arenaCard";
 
 
 const ArenaList = () => {
@@ -87,7 +85,23 @@ const ArenaList = () => {
       </div>
       <span className="mt-0 bg-white h-[1px] w-full"></span>
 
-      {arenas&&<ArenaCardsList cards={arenas}/>}
+      {
+        arenas && arenas.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {arenas.map((card, idx) => (
+              <ArenaCard 
+                key={idx} 
+                name={card.name} 
+                author={card.author} 
+                timeline={card.timeline} 
+                link={card.link} 
+                people={card.people} 
+                status={card.status} 
+              />
+            ))}
+          </div>
+        )
+      }
 
       {
         arenas.length == 0 && (

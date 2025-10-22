@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Search } from "lucide-react";
-import type { Token } from "@/types/token";
+import type { Token } from "@/types/types";
 import {
   Dialog,
   DialogContent,

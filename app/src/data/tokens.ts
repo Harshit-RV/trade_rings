@@ -1,4 +1,4 @@
-import type { Token } from "@/types/token";
+import type { Token } from "@/types/types";
 
 export const TOKENS: Token[] = [
   {
