@@ -4,7 +4,7 @@ import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import type { EphemeralRollups } from "@/anchor-program/types";
 import idl from "@/anchor-program/idl.json";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
-import { ArenaCard } from "@/components/arenaCard";
+import { ArenaCard } from "@/components/ArenaCard.tsx";
 
 
 const ArenaList = () => {
