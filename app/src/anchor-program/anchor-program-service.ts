@@ -64,6 +64,7 @@ class AnchorProgramService {
     }
   };
 
+  // TODO: add try catch, refactor, check if this is correct
   createArena = async (): Promise<string> => {
     // Create a new arena, mirroring logic from anchor_interactions
     const transaction = await this.program.methods
