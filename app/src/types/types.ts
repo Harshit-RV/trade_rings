@@ -10,7 +10,7 @@ export interface Token {
 export interface SwapTransaction {
   fromToken: Token;
   toToken: Token;
-  fromAmount: number;
-  toAmount: number;
+  fromAmount: number | undefined;
+  toAmount: number | undefined;
   slippagePercent: number;
 }

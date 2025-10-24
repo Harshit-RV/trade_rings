@@ -16,8 +16,8 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
   const [ swapTransaction, setSwapTransaction ] = useState<SwapTransaction>({
     fromToken: TOKENS[0],
     toToken: TOKENS[1],
-    fromAmount: 0,
-    toAmount: 0,
+    fromAmount: undefined,
+    toAmount: undefined,
     slippagePercent: 0,
   });
 
@@ -53,7 +53,7 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
           
           <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
             <input
-              placeholder="0.0"
+              placeholder="0"
               inputMode="decimal"
               pattern="[0-9]*[.,]?[0-9]*"
               value={swapTransaction.toAmount}
@@ -66,12 +66,12 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
         
         {/* Swap Button */}
         <div className="flex justify-center">
-          <button
+          <Button
             onClick={() => handleSwapTokens()}
-            className="bg-[#2A2A2A] hover:bg-[#3A3A3A] p-2 rounded-full transition-colors"
+            className="bg-[#2A2A2A] hover:bg-[#3A3A3A] rounded-full"
           >
-            <IoSwapVertical />
-          </button>
+            <IoSwapVertical className="text-white" />
+          </Button>
         </div>
 
         <div className="bg-primary-background py-7 px-8 rounded-4xl flex items-center">
@@ -92,7 +92,7 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
           
           <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
             <input
-              placeholder="0.0"
+              placeholder="0"
               inputMode="decimal"
               pattern="[0-9]*[.,]?[0-9]*"
               value={swapTransaction.fromAmount}
@@ -107,18 +107,17 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
         {/* Quick percent buttons */}
         <div className="flex w-full justify-end gap-2">
           {[10,25,50,100].map(p => (
-            <button
+            <Button
               key={p}
-              type="button"
               onClick={() => {
                 const max = balances[swapTransaction.fromToken.symbol] ?? 0;
                 const val = ((p/100) * max);
                 setSwapTransaction({ ...swapTransaction, fromAmount: Number(val.toFixed(6)) });
               }}
-              className="text-xs px-4 py-2 rounded-lg bg-[#2A2A2A] hover:bg-[#3A3A3A]"
+              className="text-xs px-4 h-7 rounded-lg bg-[#2A2A2A] hover:bg-[#3A3A3A] text-foreground"
             >
               {p}%
-            </button>
+            </Button>
           ))}
         </div>
       </div>

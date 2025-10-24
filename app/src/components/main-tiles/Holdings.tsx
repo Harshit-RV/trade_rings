@@ -1,14 +1,16 @@
 import { MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
 import { BN } from "@coral-xyz/anchor";
 import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
+import { Button } from "../ui/button";
 
 
 interface HoldingsProps {
   tradingAccount: TradingAccountForArena;
   openPositions: OpenPositionAccount[];
+  delegateOpenPosAccount: (position: OpenPositionAccount) => Promise<void>;
 }
 
-const Holdings = ( { tradingAccount, openPositions } : HoldingsProps ) => {
+const Holdings = ( { tradingAccount, openPositions, delegateOpenPosAccount } : HoldingsProps ) => {
   const getAssetIcon = (asset: string) => {
     switch (asset.toLowerCase()) {
       case 'usdc':
@@ -48,6 +50,7 @@ const Holdings = ( { tradingAccount, openPositions } : HoldingsProps ) => {
               </div>
               <span className="text-sm">{formatQuantity(position.quantityRaw)}</span>
               <span className="text-sm font-medium">TODO</span>
+              <Button onClick={() => delegateOpenPosAccount(position)} className="text-sm h-5 font-medium">Delegate</Button>
             </div>
           ))
         ) : (

@@ -4,7 +4,7 @@ import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import type { EphemeralRollups } from "@/anchor-program/types";
 import idl from "@/anchor-program/idl.json";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
-import { ArenaCard } from "@/components/ArenaCard.tsx";
+import { ArenaCard } from "../components/ArenaCard";
 
 
 const ArenaList = () => {
@@ -27,7 +27,7 @@ const ArenaList = () => {
 
   const anchorProgramService = useMemo(() => {
     if (!program || !wallet) return null;
-    return new AnchorProgramService(program, wallet, idl.address);
+    return new AnchorProgramService(program, wallet, false);
   }, [program, wallet]);
 
   const setup = async () => {

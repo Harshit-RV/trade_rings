@@ -379,6 +379,40 @@ export type EphemeralRollups = {
       "args": []
     },
     {
+      "name": "commitAccount",
+      "discriminator": [
+        158,
+        250,
+        53,
+        28,
+        25,
+        111,
+        26,
+        155
+      ],
+      "accounts": [
+        {
+          "name": "account",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "magicProgram",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magicContext",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "createTradingAccountForArena",
       "discriminator": [
         163,
@@ -444,6 +478,396 @@ export type EphemeralRollups = {
           "name": "signer",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "delegateOpenPositionAccount",
+      "discriminator": [
+        168,
+        48,
+        50,
+        194,
+        180,
+        225,
+        65,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bufferOpenPositionAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "openPositionAccount"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                160,
+                115,
+                15,
+                210,
+                171,
+                9,
+                33,
+                79,
+                33,
+                129,
+                103,
+                160,
+                75,
+                222,
+                196,
+                72,
+                48,
+                188,
+                13,
+                117,
+                127,
+                3,
+                86,
+                12,
+                65,
+                5,
+                251,
+                190,
+                42,
+                143,
+                108,
+                183
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegationRecordOpenPositionAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "openPositionAccount"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegationProgram"
+            }
+          }
+        },
+        {
+          "name": "delegationMetadataOpenPositionAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "openPositionAccount"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegationProgram"
+            }
+          }
+        },
+        {
+          "name": "openPositionAccount",
+          "writable": true
+        },
+        {
+          "name": "ownerProgram",
+          "address": "BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop"
+        },
+        {
+          "name": "delegationProgram",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "tradingAccount",
+          "type": "pubkey"
+        },
+        {
+          "name": "pdaPositionSeed",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "delegateTradingAccount",
+      "discriminator": [
+        81,
+        32,
+        231,
+        28,
+        213,
+        71,
+        26,
+        191
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bufferTradingAccountForArena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tradingAccountForArena"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                160,
+                115,
+                15,
+                210,
+                171,
+                9,
+                33,
+                79,
+                33,
+                129,
+                103,
+                160,
+                75,
+                222,
+                196,
+                72,
+                48,
+                188,
+                13,
+                117,
+                127,
+                3,
+                86,
+                12,
+                65,
+                5,
+                251,
+                190,
+                42,
+                143,
+                108,
+                183
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegationRecordTradingAccountForArena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tradingAccountForArena"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegationProgram"
+            }
+          }
+        },
+        {
+          "name": "delegationMetadataTradingAccountForArena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tradingAccountForArena"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegationProgram"
+            }
+          }
+        },
+        {
+          "name": "tradingAccountForArena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  102,
+                  111,
+                  114,
+                  95,
+                  97,
+                  114,
+                  101,
+                  110,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "arenaAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "arenaAccount"
+        },
+        {
+          "name": "ownerProgram",
+          "address": "BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop"
+        },
+        {
+          "name": "delegationProgram",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
         },
         {
           "name": "systemProgram",
@@ -584,6 +1008,77 @@ export type EphemeralRollups = {
           "type": "i64"
         }
       ]
+    },
+    {
+      "name": "processUndelegation",
+      "discriminator": [
+        196,
+        28,
+        41,
+        206,
+        48,
+        37,
+        51,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "baseAccount",
+          "writable": true
+        },
+        {
+          "name": "buffer"
+        },
+        {
+          "name": "payer",
+          "writable": true
+        },
+        {
+          "name": "systemProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "accountSeeds",
+          "type": {
+            "vec": "bytes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "undelegate",
+      "discriminator": [
+        131,
+        148,
+        180,
+        198,
+        91,
+        104,
+        42,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "account",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "magicProgram",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magicContext",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": []
     },
     {
       "name": "updatePosition",
