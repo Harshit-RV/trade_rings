@@ -4,13 +4,18 @@ import './index.css'
 import App from './App.tsx'
 import { WalletContext } from './contexts/WalletContext.tsx'
 import { BrowserRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from 'react-query'
+
+const queryClient = new QueryClient();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <WalletContext>
-        <App />
-      </WalletContext>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <WalletContext>
+          <App />
+        </WalletContext>
+      </BrowserRouter>
+    </QueryClientProvider>
   </StrictMode>,
 )

@@ -47,7 +47,10 @@ class AnchorProgramService {
 
   isAccountDelegated = async (account: PublicKey) => {
     const accountInfo = await this.program.provider.connection.getAccountInfo(account);
-    const isAccountDelegated = accountInfo && !accountInfo.owner.equals(this.program.programId);
+    
+    if (!accountInfo) return false
+
+    const isAccountDelegated = !accountInfo.owner.equals(this.program.programId);
     
     return isAccountDelegated;
   }

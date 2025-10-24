@@ -1,19 +1,15 @@
 // import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
-import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
-import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
-import * as anchor from "@coral-xyz/anchor";
-import type { EphemeralRollups } from "@/anchor-program/types";
-import idl from "@/anchor-program/idl.json";
-import { MAGICBLOCK_RPC, MAGICBLOCK_WS_RPC, MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
+import { MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
 import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
+import { useProgramServices } from "@/hooks/useProgramServices";
 import { TOKENS } from "@/data/tokens";
 // import HoldingsChart from "@/components/HoldingsChart";
-import SwapComponent from "@/components/main-tiles/SwapComponent";
-import Holdings from "@/components/main-tiles/Holdings";
+import SwapComponent from "@/components/trade/SwapComponent";
+import Holdings from "@/components/holdings/Holdings";
 import Leaderboard from "@/components/main-tiles/Leaderboard";
 import type { SwapTransaction } from "@/types/types";
 import ManualDelegate from "@/components/main-tiles/ManualDelegate";
@@ -21,43 +17,15 @@ import toast from "react-hot-toast";
 
 const ManualTrade = () => {
   const { arenaId } = useParams();
-  const { connection } = useConnection();
-  const wallet = useAnchorWallet();
+  const { programService, programServiceER } = useProgramServices();
 
   const [ tradingAccount, setTradingAccount ] = useState<TradingAccountForArena | null>(null);
   const [ isTradingAccountDelegated, setIsTradingAccountDelegated ] = useState<boolean | null>(null);
   const [ tradingAccountOnER, setTradingAccountOnER ] = useState<TradingAccountForArena | null>(null);
   const [ openPositions, setOpenPositions ] = useState<OpenPositionAccount[]>([]);
   const [ openPositionsOnER, setOpenPositionsOnER ] = useState<OpenPositionAccount[]>([]);
-  
-  const programService = useMemo(() => {
-    if (!wallet) return null;
 
-    const provider = new AnchorProvider(connection, wallet, { commitment: "processed" });
-    setProvider(provider);
-    
-    const program = new Program<EphemeralRollups>(idl as EphemeralRollups, provider);
-
-    return new AnchorProgramService(program, wallet, false);
-  }, [wallet]);
-
-  const programServiceER = useMemo(() => {
-    if (!wallet) return null;
-
-    const providerER = new AnchorProvider(
-      new anchor.web3.Connection(MAGICBLOCK_RPC, {
-        wsEndpoint: MAGICBLOCK_WS_RPC,
-      }),
-      wallet,
-      { commitment: "processed" }
-    )
-    
-    const programER = new Program<EphemeralRollups>(idl as EphemeralRollups, providerER);
-
-    return new AnchorProgramService(programER, wallet, true);
-  }, [wallet]);
-
-  const setup = async (service: AnchorProgramService) => {
+  const setup = useCallback(async (service: AnchorProgramService) => {
     if (!arenaId) {
       console.log("Missing required data:");
       return;
@@ -79,9 +47,9 @@ const ManualTrade = () => {
     } catch (error) {
       console.error("Error in setup:", error);
     }
-  }
+  }, [arenaId]);
 
-  const setupER = async (service: AnchorProgramService) => {
+  const setupER = useCallback(async (service: AnchorProgramService) => {
     if (!arenaId) {
       console.log("Missing required data:");
       return;
@@ -103,12 +71,12 @@ const ManualTrade = () => {
     } catch (error) {
       console.error("Error in setup ER:", error);
     }
-  }
+  }, [arenaId]);
 
   useEffect(() => {
     if (programService) setup(programService);
     if (programServiceER) setupER(programServiceER)
-  }, [arenaId, programService, wallet, programServiceER])
+  }, [arenaId, programService, programServiceER, setup, setupER])
 
   // Compute balances from tradingAccount and openPositions
   const balances = useMemo(() => {
@@ -137,7 +105,7 @@ const ManualTrade = () => {
   const handleSwapTransaction = async (tx: SwapTransaction) => {
     if (!programService || !arenaId || !programServiceER) return;
 
-    const service = programService;
+    const service = programServiceER;
 
     if (tx.fromToken.symbol != "USDC") {
       toast.error("Swap is not implemented yet for this pair")
@@ -230,14 +198,6 @@ const ManualTrade = () => {
             <Holdings tradingAccount={tradingAccount} openPositions={openPositions} delegateOpenPosAccount={delegateOpenPosAccount}/>
             
             {/* <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/> */}
-                        
-            {
-              tradingAccountOnER && (
-                <div>
-                  <Holdings tradingAccount={tradingAccountOnER} openPositions={openPositionsOnER} delegateOpenPosAccount={delegateOpenPosAccount}/>
-                </div>
-              )
-            }
           </div>
         )
       }

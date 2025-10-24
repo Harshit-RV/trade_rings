@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { TOKENS } from "@/data/tokens";
 import { IoSwapVertical } from "react-icons/io5";
-import TokenSelector from "@/components/TokenSelector";
+import TokenSelector from "@/components/trade/TokenSelector";
 import type { SwapTransaction } from "@/types/types";
 
 interface SwapComponentProps {

@@ -14,3 +14,7 @@ export interface SwapTransaction {
   toAmount: number | undefined;
   slippagePercent: number;
 }
+
+export interface DelegationStatus {
+  isDelegated: boolean
+}

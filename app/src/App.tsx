@@ -5,7 +5,7 @@ import { Routes, Route, Link } from 'react-router';
 import { useEffect } from 'react';
 import ManualTrade from './pages/ManualTrade';
 import ArenaList from './pages/ArenaList';
-import Breadcrumb from './components/Breadcrumb';
+import Breadcrumb from './components/common/Breadcrumb';
 import TradeTabs from './components/TradeTabs';
 
 
