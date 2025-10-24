@@ -166,9 +166,8 @@ pub mod ephemeral_rollups {
         Ok(())
     }
     
-    pub fn delegate_open_position_account(ctx: Context<DelegateOpenPositionAccount>, pda_position_seed: u8) -> Result<()> {
+    pub fn delegate_open_position_account(ctx: Context<DelegateOpenPositionAccount>, trading_account: Pubkey, pda_position_seed: u8) -> Result<()> {
         let signer = &ctx.accounts.signer;
-        let trading_account = &ctx.accounts.trading_account_for_arena;
         let position_account =  &ctx.accounts.open_position_account;
 
         ctx.accounts.delegate_open_position_account(
@@ -413,14 +412,6 @@ pub struct DelegateOpenPositionAccount<'info> {
 
     #[account(mut, del)]
     pub open_position_account: Account<'info, OpenPositionAccount>,
-
-    #[account(
-        seeds = [TRADING_ACCOUNT_SEED, signer.key().as_ref(), arena_account.key().as_ref()],
-        bump = trading_account_for_arena.bump
-    )]
-    pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
-
-    pub arena_account: Account<'info, ArenaAccount>,
 }
 
 
