@@ -1,141 +1,64 @@
-// import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { BN } from "@coral-xyz/anchor";
 import { useParams } from "react-router";
 import { PublicKey } from "@solana/web3.js";
-import { MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
-import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
-import AnchorProgramService from "@/anchor-program/anchor-program-service";
-import { useProgramServices } from "@/hooks/useProgramServices";
-import { TOKENS } from "@/data/tokens";
-// import HoldingsChart from "@/components/HoldingsChart";
+import type { OpenPositionAccount } from "@/anchor-program/anchor-program-service";
 import SwapComponent from "@/components/trade/SwapComponent";
 import Holdings from "@/components/holdings/Holdings";
 import Leaderboard from "@/components/main-tiles/Leaderboard";
-import type { SwapTransaction } from "@/types/types";
+// import type { SwapTransaction } from "@/types/types";
 import ManualDelegate from "@/components/main-tiles/ManualDelegate";
+import { ManualTradeDataProvider } from "@/contexts/ManualTradeDataContext";
 import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import useProgramServices from "@/hooks/useProgramServices";
+import useManualTradeData from "@/hooks/useManualTradeData";
+
+const ManualTradeWrapper = () => {
+  return (
+    <ManualTradeDataProvider>
+      <ManualTrade/>
+    </ManualTradeDataProvider>
+  )
+}
 
 const ManualTrade = () => {
   const { arenaId } = useParams();
-  const { programService, programServiceER } = useProgramServices();
+  const { programService, programServiceER, wallet } = useProgramServices();
 
-  const [ tradingAccount, setTradingAccount ] = useState<TradingAccountForArena | null>(null);
-  const [ isTradingAccountDelegated, setIsTradingAccountDelegated ] = useState<boolean | null>(null);
-  const [ tradingAccountOnER, setTradingAccountOnER ] = useState<TradingAccountForArena | null>(null);
-  const [ openPositions, setOpenPositions ] = useState<OpenPositionAccount[]>([]);
-  const [ openPositionsOnER, setOpenPositionsOnER ] = useState<OpenPositionAccount[]>([]);
+  // const handleSwapTransaction = async (tx: SwapTransaction) => {
+  //   if (!programService || !arenaId || !programServiceER) return;
 
-  const setup = useCallback(async (service: AnchorProgramService) => {
-    if (!arenaId) {
-      console.log("Missing required data:");
-      return;
-    }
+  //   // TODO: derive this service
+  //   const service = programService;
 
-    try {
-      const arenaPubkey = new PublicKey(arenaId);
-      const tradeAccount = await service.fetchTradingAccountForArena(arenaPubkey);
+  //   if (tx.fromToken.symbol != "USDC") {
+  //     toast.error("Swap is not implemented yet for this pair")
+  //     return;
+  //   }
 
-      if (!tradeAccount) return
-      setTradingAccount(tradeAccount);
-      // Check if trading account is delegated
-      const isDelegated = await service.isAccountDelegated(tradeAccount.selfkey);
-      setIsTradingAccountDelegated(isDelegated);
-      
-      const positions = await service.fetchOpenPositionsForTradingAccount(tradeAccount);
-      if (positions) setOpenPositions(positions);
+  //   if (tx.toAmount == undefined) {
+  //     toast.error("Missing required field: toAmount")
+  //     return;
+  //   }
 
-    } catch (error) {
-      console.error("Error in setup:", error);
-    }
-  }, [arenaId]);
+  //   // TODO: find a more efficient way to do this
+  //   // go over positions and find the positions account for this asset.
+  //   const pos = openPositions.find((pos) => {
+  //     if (pos.asset == tx.toToken.symbol) return true;
+  //   })
 
-  const setupER = useCallback(async (service: AnchorProgramService) => {
-    if (!arenaId) {
-      console.log("Missing required data:");
-      return;
-    }
+  //   // TODO: get correct price account for asset
+  //   const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
 
-    try {
-      const arenaPubkey = new PublicKey(arenaId);
-      const tradeAccount = await service.fetchTradingAccountForArena(arenaPubkey);
+  //   if (pos == undefined) {
+  //     await service.openPositionInArena(arenaId, tx.toToken.symbol, priceAccount, tx.toAmount)
+  //   } else {
+  //     await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, tx.toAmount)
+  //   }
 
-      if (!tradeAccount) {
-        console.log("no trading account on ER")
-        return
-      }
-      setTradingAccountOnER(tradeAccount);
-      
-      const positions = await service.fetchOpenPositionsForTradingAccount(tradeAccount);
-      if (positions) setOpenPositionsOnER(positions);
-
-    } catch (error) {
-      console.error("Error in setup ER:", error);
-    }
-  }, [arenaId]);
-
-  useEffect(() => {
-    if (programService) setup(programService);
-    if (programServiceER) setupER(programServiceER)
-  }, [arenaId, programService, programServiceER, setup, setupER])
-
-  // Compute balances from tradingAccount and openPositions
-  const balances = useMemo(() => {
-    // Seed demo balances for all known tokens (for UI testing)
-    const demo: Record<string, number> = {};
-    TOKENS.forEach(t => {
-      // Keep a stable pseudo-random per symbol across renders
-      const seed = Array.from(t.symbol).reduce((a, c) => a + c.charCodeAt(0), 0);
-      const pseudo = (Math.sin(seed) + 1) / 2; // 0..1
-      demo[t.symbol] = Number((pseudo * 250).toFixed(2));
-    });
-
-    // Overlay real balances if available
-    if (tradingAccount) {
-      demo['USDC'] = Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD;
-    }
-    if (openPositions && openPositions.length > 0) {
-      for (const pos of openPositions) {
-        const qty = Number(pos.quantityRaw) / QUANTITY_SCALING_FACTOR;
-        demo[pos.asset] = (demo[pos.asset] ?? 0) + qty;
-      }
-    }
-    return demo;
-  }, [tradingAccount, openPositions]);
-
-  const handleSwapTransaction = async (tx: SwapTransaction) => {
-    if (!programService || !arenaId || !programServiceER) return;
-
-    const service = programServiceER;
-
-    if (tx.fromToken.symbol != "USDC") {
-      toast.error("Swap is not implemented yet for this pair")
-      return;
-    }
-
-    if (tx.toAmount == undefined) {
-      toast.error("Missing required field: toAmount")
-      return;
-    }
-
-    // TODO: find a more efficient way to do this
-    // go over positions and find the positions account for this asset.
-    const pos = openPositions.find((pos) => {
-      if (pos.asset == tx.toToken.symbol) return true;
-    })
-
-    // TODO: get correct price account for asset
-    const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
-
-    if (pos == undefined) {
-      await service.openPositionInArena(arenaId, tx.toToken.symbol, priceAccount, tx.toAmount)
-    } else {
-      await service.updatePositionQuantity(arenaId, pos, priceAccount, tx.toAmount)
-    }
-
-    await setup(programService)
-    await setupER(programServiceER)
-    toast.success("Updated")
-  };
+  //   await setup(programService)
+  //   toast.success("Updated")
+  // };
 
   const delegateTradingAccount = async () => {
     if (!arenaId || !programService) return
@@ -148,26 +71,79 @@ const ManualTrade = () => {
 
     await programService.delegateOpenPosAccount(arenaId, position);
   }
-  
-  const commitAll = async () => {
-    if (!programServiceER) return
 
-    await programServiceER.commitState(String(tradingAccount?.selfkey))
-
-    for (let i = 0; i < openPositionsOnER.length; i++ ) {
-      await programServiceER.commitState(String(openPositionsOnER[i].selfkey))
-    }
-  }
-
-
-  const undelegateAll = async () => {
-    if (!programServiceER) return
+  const openNewPositionFromDelegatedTradingAccount = async () => {
+    if (!programServiceER || !arenaId || !programService) return
 
     await programServiceER.undelegateAccount(String(tradingAccount?.selfkey))
+    // if (!undelegateTradingAccountTx) return
 
-    for (let i = 0; i < openPositionsOnER.length; i++ ) {
-      await programServiceER.undelegateAccount(String(openPositionsOnER[i].selfkey))
+    // TODO: get correct price account for asset
+    const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
+
+    // Request transactions (don't send yet)
+    const openPosTx = await programService.openPositionInArena(arenaId, "BONK", priceAccount, 0.5, true)
+    if (!openPosTx) return;
+
+    const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
+    if (!delegateTradeAccTx) return
+    
+    // const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
+    // if (!delegateTradeAccTx) return
+
+    const txList = [
+      openPosTx, delegateTradeAccTx
+    ]
+
+    const signedTx = await wallet?.signAllTransactions(txList)
+    if (!signedTx) return;
+    
+    const txSigs = await Promise.all(
+      signedTx.map((tx) => programService.connection.sendRawTransaction(tx.serialize()))
+    );
+    
+    // Optional: confirm them
+    await Promise.all(
+      txSigs.map((sig) =>
+        programService.connection.confirmTransaction(sig, "confirmed")
+      )
+    );
+
+    // Now delegate the newly created open position account on base
+    if (wallet && tradingAccount) {
+      const seed = tradingAccount.openPositionsCount; // seed used to create the new position
+      const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
+      const [posPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("open_position_account"),
+          wallet.publicKey.toBuffer(),
+          tradingAccount.selfkey.toBuffer(),
+          countLE,
+        ],
+        programService.program.programId,
+      );
+
+      const newPos = {
+        selfkey: posPda,
+        asset: "ORCA",
+        quantityRaw: new BN(0),
+        bump: 0,
+        seed,
+      } as OpenPositionAccount;
+
+      await programService.delegateOpenPosAccount(arenaId, newPos);
     }
+
+    // await setup(programService)
+    toast("done")
+  }
+
+  const { tradingAccount, openPosAddresses, isLoading } = useManualTradeData();
+
+  if (isLoading) {
+    return (
+      <div>loading</div>
+    )
   }
 
   return (
@@ -177,25 +153,28 @@ const ManualTrade = () => {
       </div>
       
       <div className="w-[35%]">
+        {/* <div className="bg-black text-xs overflow-auto"> {JSON.stringify(all)}</div> */}
         <SwapComponent 
-          swapHandler={handleSwapTransaction}
-          balances={balances}
+          swapHandler={() => {}}
+          // TODO: pass proper balances here
+          balances={{}}
         />
       </div>
 
       {
         tradingAccount && (
           <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
+
+            <Button onClick={() => openNewPositionFromDelegatedTradingAccount()}>Open Brand new pos</Button>
             
             <ManualDelegate 
               tradingAccount={tradingAccount} 
-              isTradingAccountDelgated={isTradingAccountDelegated}
+              // isTradingAccountDelgated={isTradingAccountDelegated}
               delegateTradingAccount={delegateTradingAccount}
-              commitAll={commitAll}
-              undelegateAll={undelegateAll}
+              openPosAddresses={openPosAddresses}
             /> 
             
-            <Holdings tradingAccount={tradingAccount} openPositions={openPositions} delegateOpenPosAccount={delegateOpenPosAccount}/>
+            <Holdings tradingAccount={tradingAccount} openPositions={openPosAddresses} delegateOpenPosAccount={delegateOpenPosAccount}/>
             
             {/* <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/> */}
           </div>
@@ -206,4 +185,4 @@ const ManualTrade = () => {
 }
 
 
-export default ManualTrade;
+export default ManualTradeWrapper;

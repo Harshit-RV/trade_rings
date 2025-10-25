@@ -31,6 +31,10 @@ export interface ArenaAccount {
   bump: number;
 }
 
+export interface OpenPosAccAddress {
+  selfKey: PublicKey,
+  seed: number
+}
 
 class AnchorProgramService {
   program: Program<EphemeralRollups>
@@ -78,8 +82,29 @@ class AnchorProgramService {
       return null;
     }
   };
+  
+  // getTradeAccForArena = async (arenaPubkey: PublicKey) : Promise<PublicKey | null> => {
+  //   try {
+  //     const [ tradingPda ] = PublicKey.findProgramAddressSync(
+  //       [
+  //         Buffer.from("trading_account_for_arena"),
+  //         this.wallet.publicKey.toBuffer(),
+  //         arenaPubkey.toBuffer()
+  //       ],
+  //       new PublicKey(this.program.programId),
+  //     );
+      
+  //     console.log("trading : ", tradingPda.toBase58())
+
+  //     return tradingPda
+  //   } catch (error) {
+  //     console.error("Trading account not found:", error);
+  //     return null;
+  //   }
+  // };
 
   // TODO: add try catch, refactor, check if this is correct
+  
   createArena = async (): Promise<string> => {
     // Create a new arena, mirroring logic from anchor_interactions
     const transaction = await this.program.methods
@@ -98,15 +123,49 @@ class AnchorProgramService {
   }
 
   // positions
-  fetchOpenPositionsForTradingAccount = async (tradingAccount: TradingAccountForArena): Promise<OpenPositionAccount[] | null> => {
+  // fetchOpenPositionsForTradingAccount = async (tradingAccount: TradingAccountForArena): Promise<OpenPositionAccount[] | null> => {
+  //   try {
+  //     const positions: OpenPositionAccount[] = [];
+      
+  //     for (let i = 0; i < tradingAccount.openPositionsCount; i++) {
+  //       try {
+  //         const countLE = new BN(i).toArrayLike(Buffer, "le", 1);
+
+  //         const [ pda ] = PublicKey.findProgramAddressSync(
+  //           [
+  //             Buffer.from("open_position_account"),
+  //             this.wallet.publicKey.toBuffer(),
+  //             tradingAccount.selfkey.toBuffer(),
+  //             countLE
+  //           ],
+  //           new PublicKey(this.program.programId),
+  //         );
+
+  //         const pos = await this.program.account.openPositionAccount.fetch(pda);
+          
+  //         positions.push({ ...pos, selfkey: pda, seed: i});
+  //       // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  //       } catch (error) {
+  //         // console.error(`Error fetching open position ${i}:`, error);
+  //       }
+  //     }
+
+  //     return positions;
+  //   } catch (error) {
+  //     console.error("Error fetching open positions:", error);
+  //     return null
+  //   }
+  // };
+
+  getOpenPosAccAddresses = async (tradingAccount: TradingAccountForArena): Promise<OpenPosAccAddress[] | null> => {
     try {
-      const positions: OpenPositionAccount[] = [];
+      const positions: OpenPosAccAddress[] = [];
       
       for (let i = 0; i < tradingAccount.openPositionsCount; i++) {
         try {
           const countLE = new BN(i).toArrayLike(Buffer, "le", 1);
 
-          const [pda] = PublicKey.findProgramAddressSync(
+          const [ pda ] = PublicKey.findProgramAddressSync(
             [
               Buffer.from("open_position_account"),
               this.wallet.publicKey.toBuffer(),
@@ -115,13 +174,10 @@ class AnchorProgramService {
             ],
             new PublicKey(this.program.programId),
           );
-
-          const pos = await this.program.account.openPositionAccount.fetch(pda);
           
-          positions.push({ ...pos, selfkey: pda, seed: i});
-        } catch (error) {
-          console.error(`Error fetching open position ${i}:`, error);
-        }
+          positions.push({ selfKey: pda, seed: i});
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) { /* empty */ }
       }
 
       return positions;
@@ -132,7 +188,7 @@ class AnchorProgramService {
   };
 
   // can never work on ER
-  openPositionInArena = async (arenaPubkey: string, asset: string, priceAccount: string, quantity: number) => {
+  openPositionInArena = async (arenaPubkey: string, asset: string, priceAccount: string, quantity: number, returnTransactionOnly = false) => {
     try {      
       // Convert fractional quantity to fixed-point representation
       const rawQty = new BN(Math.floor((quantity) * 1_000_000));
@@ -148,6 +204,8 @@ class AnchorProgramService {
       transaction.feePayer = this.wallet.publicKey;
       transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
 
+      if (returnTransactionOnly) return transaction
+
       const signedTx = await this.wallet.signTransaction(transaction);
       const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
 
@@ -157,14 +215,14 @@ class AnchorProgramService {
     }
   };
 
-  updatePositionQuantity = async (arenaPubkey: string, position: OpenPositionAccount, priceAccount: string, deltaQty: number) => {   
+  updatePositionQuantity = async (arenaPubkey: string, positionSelfkey: string, priceAccount: string, deltaQty: number) => {   
     const deltaQtyRaw = new BN(deltaQty * QUANTITY_SCALING_FACTOR);
     
     try {
       const transaction = await this.program.methods
         .updatePosition(deltaQtyRaw)
         .accounts({
-          openPositionAccount: position.selfkey,
+          openPositionAccount: positionSelfkey,
           arenaAccount: arenaPubkey,
           priceUpdate: priceAccount
         })
@@ -268,7 +326,7 @@ class AnchorProgramService {
 
   // EPHEMERAL ROLLUPS - delegate, commit, undelegate
   // TODO: add check: if isOnER is false, return early
-  delegateTradingAccount = async (arenaPubkey: string) => {
+  delegateTradingAccount = async (arenaPubkey: string, returnTransactionOnly = false) => {
     try {
       const transaction = await this.program.methods
         .delegateTradingAccount()
@@ -279,6 +337,8 @@ class AnchorProgramService {
 
       transaction.feePayer = this.wallet.publicKey;
       transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
+
+      if (returnTransactionOnly) return transaction
 
       const signedTx = await this.wallet.signTransaction(transaction);
       const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
@@ -353,7 +413,7 @@ class AnchorProgramService {
     }
   }
 
-  undelegateAccount = async (account: string) => {
+  undelegateAccount = async (account: string, returnTransactionOnly = false) => {
     try {
       const transaction = await this.program.methods
       .undelegate()
@@ -369,6 +429,8 @@ class AnchorProgramService {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = tempKeypair.publicKey;
       transaction.sign(tempKeypair);
+
+      if (returnTransactionOnly) return transaction
 
       const signedTx = await this.wallet.signTransaction(transaction);
       

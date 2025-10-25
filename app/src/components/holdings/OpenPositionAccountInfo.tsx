@@ -1,18 +1,11 @@
-import type { OpenPositionAccount } from "@/anchor-program/anchor-program-service";
-import { useProgramServices } from "@/hooks";
+import type { OpenPosAccAddress, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
+import useProgramServices from "@/hooks/useProgramServices";
 import type { DelegationStatus } from "@/types/types";
 import Helper from "@/utils/helper";
-import type { PublicKey } from "@solana/web3.js";
 import { useQuery } from "react-query";
 
-interface OpenPositionAccountInfoProps {
-  account: PublicKey
-  seed: number
-}
 
-
-
-const OpenPositionAccountInfo = ( { account, seed } : OpenPositionAccountInfoProps ) => {
+const OpenPositionAccountInfo = ( { selfKey, seed } : OpenPosAccAddress ) => {
   
   const { programService, getServiceForAccount } = useProgramServices();
 
@@ -20,34 +13,36 @@ const OpenPositionAccountInfo = ( { account, seed } : OpenPositionAccountInfoPro
     // TODO: this check should be in useProgramServices
     if (!programService) return null;
 
-    const isDelegated = await programService.isAccountDelegated(account);
+    const isDelegated = await programService.isAccountDelegated(selfKey);
 
     const service = getServiceForAccount(isDelegated);
     if (!service) return null
     
     try {
-      const data = await service.program.account.openPositionAccount.fetch(account)
+      const data = await service.program.account.openPositionAccount.fetch(selfKey)
     
+      console.log("finished computing: ", selfKey.toBase58())
       return {
         ...data,
-        selfkey: account,
+        selfkey: selfKey,
         seed: seed,
         isDelegated: isDelegated
       }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_) {
-      const data = await programService.program.account.openPositionAccount.fetch(account)
+      const data = await programService.program.account.openPositionAccount.fetch(selfKey)
       
+      console.log("finished computing: ", selfKey.toBase58())
       return {
         ...data,
-        selfkey: account,
+        selfkey: selfKey,
         seed: seed,
         isDelegated: isDelegated
       }
     }
   }
 
-  const { data, isLoading } = useQuery(`account-info-${account}`, fetchAccountInfo);
+  const { data, isLoading } = useQuery(`account-info-${selfKey}`, fetchAccountInfo);
 
   if (isLoading) {
     return (

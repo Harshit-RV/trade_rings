@@ -7,7 +7,7 @@ import idl from "@/anchor-program/idl.json";
 import { MAGICBLOCK_RPC, MAGICBLOCK_WS_RPC } from "@/constants";
 import AnchorProgramService from "@/anchor-program/anchor-program-service";
 
-export const useProgramServices = () => {
+const useProgramServices = () => {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
 

@@ -1,5 +1,5 @@
 import type { TradingAccountForArena } from "@/anchor-program/anchor-program-service";
-import { useProgramServices } from "@/hooks";
+import useProgramServices from "@/hooks/useProgramServices";
 import type { DelegationStatus } from "@/types/types";
 import Helper from "@/utils/helper";
 import type { PublicKey } from "@solana/web3.js";
@@ -27,7 +27,7 @@ const TradingAccountInfo = ( { account } : TradingAccountInfoProps ) => {
       console.log("service not found")
       return null
     }
-    
+
     try {
       const data = await service.program.account.tradingAccountForArena.fetch(account)
     

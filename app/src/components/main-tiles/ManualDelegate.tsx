@@ -1,30 +1,63 @@
-import type { TradingAccountForArena } from "@/anchor-program/anchor-program-service";
+import type { OpenPosAccAddress, TradingAccountForArena } from "@/anchor-program/anchor-program-service";
 import { Button } from "../ui/button";
+import useProgramServices from "@/hooks/useProgramServices";
+import useManualTradeData from "@/hooks/useManualTradeData";
 
 interface ManualDelegateProps {
   tradingAccount: TradingAccountForArena;
-  isTradingAccountDelgated: boolean | null;
+  openPosAddresses: OpenPosAccAddress[]
   delegateTradingAccount: () => void;
-  commitAll: () => void;
-  undelegateAll: () => void;
 }
 
-const ManualDelegate = ( { isTradingAccountDelgated, delegateTradingAccount, commitAll, undelegateAll } : ManualDelegateProps ) => {
+const ManualDelegate = ( { tradingAccount, openPosAddresses, delegateTradingAccount } : ManualDelegateProps ) => {
 
-  // const [ loading, setLoading ] = useState(true)
+  const { programServiceER } = useProgramServices();
+
+  const { delegationStatusByAccount } = useManualTradeData()
+   
+  const commitAll = async () => {
+    if (!programServiceER) return
+
+    await programServiceER.commitState(String(tradingAccount.selfkey))
+
+    for (let i = 0; i < openPosAddresses.length; i++ ) {
+      await programServiceER.commitState(String(openPosAddresses[i].selfKey))
+    }
+  }
+
+  const undelegateAll = async () => {
+    if (!programServiceER) return
+
+    await programServiceER.undelegateAccount(String(tradingAccount?.selfkey))
+
+    for (let i = 0; i < openPosAddresses.length; i++ ) {
+      await programServiceER.undelegateAccount(String(openPosAddresses[i].selfKey))
+    }
+  }
 
   return (
     <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
       <h2 className="text-md font-bold mb-2">Execution Engine</h2>
 
       <div className="flex flex-col gap-3">
-        {
+        {/* {
           isTradingAccountDelgated && (
             <div>Boosted</div>
           )
-        }
-        <span className="text-sm text-gray-400">We execute all your trades in a rollup to ensure low latency and high throughput.</span> 
-        <span className="text-sm text-gray-400">Fix sync issues between Execution engine and Solana base layer .</span> 
+        } */}
+        {/* <span className="text-sm text-gray-400">We execute all your trades in a rollup to ensure low latency and high throughput.</span> 
+        <span className="text-sm text-gray-400">Fix sync issues between Execution engine and Solana base layer .</span>  */}
+        
+        <div>
+          <div>Undelegated Accounts</div>
+          <div className="flex flex-col gap-0.5">
+            {
+              Object.keys(delegationStatusByAccount).map((acc) => (
+                !delegationStatusByAccount[acc] && <div className="bg-primary-background text-xs rounded-lg px-4 py-2">{acc.slice(0, 5)}..{acc.slice(-10, -1)}</div>
+              ))
+            }
+          </div>
+        </div>
         
         <div className="flex gap-2 w-full">
           <Button onClick={() => delegateTradingAccount()} className="bg-primary-background text-white hover:bg-primary-background/60">Delegate</Button>

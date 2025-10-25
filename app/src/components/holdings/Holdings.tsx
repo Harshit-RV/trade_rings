@@ -1,17 +1,19 @@
-import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
+import type { TradingAccountForArena, OpenPositionAccount, OpenPosAccAddress } from "@/anchor-program/anchor-program-service";
 import OpenPositionAccountInfo from "./OpenPositionAccountInfo";
 import TradingAccountInfo from "./TradingAccountInfo";
 
 
 interface HoldingsProps {
   tradingAccount: TradingAccountForArena;
-  openPositions: OpenPositionAccount[];
+  openPositions: OpenPosAccAddress[];
   delegateOpenPosAccount: (position: OpenPositionAccount) => Promise<void>;
 }
 
 // TODO: reuse code in TradingAccountInfo and OpenPositionAccountInfo, edit the early return statement designs
 
-const Holdings = ( { tradingAccount, openPositions } : HoldingsProps ) => {
+const Holdings = ( { tradingAccount, openPositions, 
+  // delegateOpenPosAccount 
+} : HoldingsProps ) => {
 
   return (
     <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
@@ -30,12 +32,10 @@ const Holdings = ( { tradingAccount, openPositions } : HoldingsProps ) => {
           openPositions.map((position, index) => (
             <div key={index} className="flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <img className="size-4" src={Helper.getAssetIcon(position.asset)} alt={position.asset} />
                 <span className="text-sm">{position.asset}</span>
               </div>
-              <span className="text-sm">{Helper.formatQuantity(position.quantityRaw)}</span>
               <span className="text-sm font-medium">TODO</span>
-              <Button onClick={() => delegateOpenPosAccount(position)} className="text-sm h-5 font-medium">Delegate</Button>
+              <button onClick={() => delegateOpenPosAccount(position)} className="text-sm h-5 font-medium">Delegate</button>
             </div>
           ))
         ) : (
@@ -46,7 +46,7 @@ const Holdings = ( { tradingAccount, openPositions } : HoldingsProps ) => {
 
         {openPositions.length > 0 ? (
           openPositions.map((position, index) => (
-            <OpenPositionAccountInfo key={index} account={position.selfkey} seed={position.seed} />
+            <OpenPositionAccountInfo key={index} selfKey={position.selfKey} seed={position.seed} />
           ))
         ) : (
           <div className="text-center text-gray-400 py-4">
