@@ -8,8 +8,11 @@ import { ManualTradeDataProvider } from "@/contexts/ManualTradeDataContext";
 import toast from "react-hot-toast";
 import useProgramServices from "@/hooks/useProgramServices";
 import useManualTradeData from "@/hooks/useManualTradeData";
-import type { SwapTransaction } from "@/types/types";
+import type { OpenPosAccAddress, SwapTransaction } from "@/types/types";
 import { useQueryClient } from "react-query";
+import { Button } from "@/components/ui/button";
+import { BN } from "@coral-xyz/anchor";
+import { PublicKey, Transaction } from "@solana/web3.js";
 
 const ManualTradeWrapper = () => {
   return (
@@ -21,7 +24,7 @@ const ManualTradeWrapper = () => {
 
 const ManualTrade = () => {
   const { arenaId } = useParams();
-  const { programServiceER } = useProgramServices();
+  const { programServiceER, programService, wallet } = useProgramServices();
   const queryClient = useQueryClient();
 
   const { tradingAccount, openPosAddresses, isLoading, posMappedByAsset } = useManualTradeData();
@@ -73,71 +76,58 @@ const ManualTrade = () => {
   };
 
 
-  // const openNewPositionFromDelegatedTradingAccount = async () => {
-  //   if (!programServiceER || !arenaId || !programService) return
+  const openNewPositionFromDelegatedTradingAccount = async () => {
+    if (!programServiceER || !arenaId || !programService) return
 
-  //   await programServiceER.undelegateAccount(String(tradingAccount?.selfkey))
-  //   // if (!undelegateTradingAccountTx) return
+    await programServiceER.undelegateAccount(String(tradingAccount?.selfkey))
+    // if (!undelegateTradingAccountTx) return
 
-  //   // TODO: get correct price account for asset
-  //   const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
+    // TODO: get correct price account for asset
+    const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
 
-  //   // Request transactions (don't send yet)
-  //   const openPosTx = await programService.openPositionInArena(arenaId, "BONK", priceAccount, 0.5, true)
-  //   if (!openPosTx) return;
+    if (!wallet || !tradingAccount) return;
 
-  //   const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
-  //   if (!delegateTradeAccTx) return
-    
-  //   // const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
-  //   // if (!delegateTradeAccTx) return
+    // Compute the PDA for the soon-to-be-created open position (seed is current count)
+    const seed = tradingAccount.openPositionsCount;
+    const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
+    const [ posPda ] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("open_position_account"),
+        wallet.publicKey.toBuffer(),
+        tradingAccount.selfkey.toBuffer(),
+        countLE,
+      ],
+      programService.program.programId,
+    );
 
-  //   const txList = [
-  //     openPosTx, delegateTradeAccTx
-  //   ]
+    const newPos: OpenPosAccAddress = { selfKey: posPda, seed };
 
-  //   const signedTx = await wallet?.signAllTransactions(txList)
-  //   if (!signedTx) return;
-    
-  //   const txSigs = await Promise.all(
-  //     signedTx.map((tx) => programService.connection.sendRawTransaction(tx.serialize()))
-  //   );
-    
-  //   // Optional: confirm them
-  //   await Promise.all(
-  //     txSigs.map((sig) =>
-  //       programService.connection.confirmTransaction(sig, "confirmed")
-  //     )
-  //   );
+    // Request transactions (don't send yet), then merge their instructions
+    const openPosTx = await programService.openPositionInArena(arenaId, "SRM", priceAccount, 0.5, true)
+    if (!openPosTx) return;
 
-  //   // Now delegate the newly created open position account on base
-  //   if (wallet && tradingAccount) {
-  //     const seed = tradingAccount.openPositionsCount; // seed used to create the new position
-  //     const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
-  //     const [posPda] = PublicKey.findProgramAddressSync(
-  //       [
-  //         Buffer.from("open_position_account"),
-  //         wallet.publicKey.toBuffer(),
-  //         tradingAccount.selfkey.toBuffer(),
-  //         countLE,
-  //       ],
-  //       programService.program.programId,
-  //     );
+    const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
+    if (!delegateTradeAccTx) return
 
-  //     const newPos = {
-  //       selfkey: posPda,
-  //       asset: "ORCA",
-  //       quantityRaw: new BN(0),
-  //       bump: 0,
-  //       seed,
-  //     } as OpenPositionAccount;
+    const delegateOpenPosTx = await programService.delegateOpenPosAccount(arenaId, newPos, true)
+    if (!delegateOpenPosTx) return
 
-  //     await programService.delegateOpenPosAccount(arenaId, newPos);
-  //   }
+    const compositeTx = new Transaction();
+    compositeTx.add(
+      ...openPosTx.instructions,
+      ...delegateTradeAccTx.instructions,
+      ...delegateOpenPosTx.instructions,
+    );
 
-  //   // await setup(programService)
-  //   toast("done")
-  // }
+    compositeTx.feePayer = wallet.publicKey;
+    compositeTx.recentBlockhash = (await programService.connection.getLatestBlockhash()).blockhash;
+
+    const signedTx = await wallet.signTransaction(compositeTx);
+    const sig = await programService.connection.sendRawTransaction(signedTx.serialize());
+    await programService.connection.confirmTransaction(sig, "confirmed");
+
+    toast("done")
+  }
 
 
   if (isLoading) {
@@ -164,7 +154,7 @@ const ManualTrade = () => {
         tradingAccount && (
           <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
 
-            {/* <Button onClick={() => openNewPositionFromDelegatedTradingAccount()}>Open Brand new pos</Button> */}
+            <Button onClick={() => openNewPositionFromDelegatedTradingAccount()}>Open Brand new pos</Button>
             
             <ManualDelegate /> 
             
