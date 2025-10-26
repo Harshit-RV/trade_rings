@@ -349,7 +349,7 @@ class AnchorProgramService {
     }
   };
 
-  delegateOpenPosAccount = async (arenaPubkey: string, position: OpenPositionAccount) => {
+  delegateOpenPosAccount = async (arenaPubkey: string, position: OpenPosAccAddress, returnTransactionOnly = false) => {
     try {
 
       const [ tradingPda ] = PublicKey.findProgramAddressSync(
@@ -365,12 +365,14 @@ class AnchorProgramService {
       const transaction = await this.program.methods
         .delegateOpenPositionAccount(tradingPda, position.seed)
         .accounts({
-          openPositionAccount: position.selfkey
+          openPositionAccount: position.selfKey
         })
         .transaction();
 
       transaction.feePayer = this.wallet.publicKey;
       transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
+
+      if (returnTransactionOnly) return transaction
 
       const signedTx = await this.wallet.signTransaction(transaction);
       const txSig = await this.connection.sendRawTransaction(signedTx.serialize());

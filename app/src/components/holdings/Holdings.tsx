@@ -1,4 +1,4 @@
-import type { TradingAccountForArena, OpenPositionAccount, OpenPosAccAddress } from "@/anchor-program/anchor-program-service";
+import type { TradingAccountForArena, OpenPosAccAddress } from "@/anchor-program/anchor-program-service";
 import OpenPositionAccountInfo from "./OpenPositionAccountInfo";
 import TradingAccountInfo from "./TradingAccountInfo";
 
@@ -6,14 +6,10 @@ import TradingAccountInfo from "./TradingAccountInfo";
 interface HoldingsProps {
   tradingAccount: TradingAccountForArena;
   openPositions: OpenPosAccAddress[];
-  delegateOpenPosAccount: (position: OpenPositionAccount) => Promise<void>;
 }
 
 // TODO: reuse code in TradingAccountInfo and OpenPositionAccountInfo, edit the early return statement designs
-
-const Holdings = ( { tradingAccount, openPositions, 
-  // delegateOpenPosAccount 
-} : HoldingsProps ) => {
+const Holdings = ( { tradingAccount, openPositions } : HoldingsProps ) => {
 
   return (
     <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
@@ -26,23 +22,6 @@ const Holdings = ( { tradingAccount, openPositions,
           <span>Quantity</span>
           <span>Value</span>
         </div>
-        
-        {/* TODO: remove this */}
-        {/* {openPositions.length > 0 ? (
-          openPositions.map((position, index) => (
-            <div key={index} className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">{position.asset}</span>
-              </div>
-              <span className="text-sm font-medium">TODO</span>
-              <button onClick={() => delegateOpenPosAccount(position)} className="text-sm h-5 font-medium">Delegate</button>
-            </div>
-          ))
-        ) : (
-          <div className="text-center text-gray-400 py-4">
-            <p className="text-sm">No open positions</p>
-          </div>
-        )} */}
 
         {openPositions.length > 0 ? (
           openPositions.map((position, index) => (

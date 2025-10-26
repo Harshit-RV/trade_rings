@@ -8,6 +8,7 @@ import { PublicKey } from "@solana/web3.js";
 type DelegationStatusMap = Record<string, boolean>;
 
 interface ManualTradeDataContextValue {
+  arenaId: string
   tradingAccount: TradingAccountForArena | null;
   tradingAccountKey: string | null;
   openPosAddresses: OpenPosAccAddress[];
@@ -15,6 +16,7 @@ interface ManualTradeDataContextValue {
   isLoading: boolean;
   deadPosAccounts: string[];
   addDeadPosAccount: (account: PublicKey | string) => void
+  delegateTradingAcc: () => Promise<void>
 }
 
 const ManualTradeDataContext = createContext<ManualTradeDataContextValue | null>(null);
@@ -25,6 +27,12 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
   const { programService, wallet } = useProgramServices();
   
   const [ deadPosAccount, setDeadPosAccounts ] = useState<string[]>([])
+
+  const delegateTradingAccount = async () => {
+    if (!arenaId || !programService) return
+
+    await programService.delegateTradingAccount(arenaId);
+  }
   
   const addPosAccount = (account: PublicKey | string) => {
     const key = typeof account === "string" ? account : account.toBase58();
@@ -87,6 +95,8 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
   const isDelegationLoading = delegationQueries.some((q) => q.isLoading);
 
   const value: ManualTradeDataContextValue = {
+    // TODO: improve the check
+    arenaId: arenaId ?? "",
     tradingAccount: tradingAccountQuery.data ?? null,
     tradingAccountKey: tradingAccountQuery.data?.selfkey?.toBase58() ?? null,
     openPosAddresses: openPosAddressesQuery.data ?? [],
@@ -94,6 +104,7 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
     isLoading: tradingAccountQuery.isLoading || openPosAddressesQuery.isLoading || isDelegationLoading,
     deadPosAccounts: deadPosAccount,
     addDeadPosAccount: addPosAccount,
+    delegateTradingAcc: delegateTradingAccount
   };
 
   return (

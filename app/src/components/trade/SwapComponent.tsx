@@ -21,15 +21,32 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
     slippagePercent: 0,
   });
 
+  // Use string inputs to allow users to type decimals like "1." and block letters
+  const [toAmountInput, setToAmountInput] = useState<string>("");
+  const [fromAmountInput, setFromAmountInput] = useState<string>("");
+
+  const sanitizeDecimal = (value: string) => value.replace(/,/g, '.');
+  const isValidDecimal = (value: string) => /^\d*\.?\d*$/.test(value);
+  const parseInputNumber = (value: string): number | undefined => {
+    const v = sanitizeDecimal(value);
+    if (v === '' || v === '.') return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
 
   const handleSwapTokens = () => {
+    const from = fromAmountInput;
+    const to = toAmountInput;
+    
     setSwapTransaction({
+      ...swapTransaction,
       fromToken: swapTransaction.toToken,
       toToken: swapTransaction.fromToken,
-      fromAmount: Number(swapTransaction.toAmount),
-      toAmount: Number(swapTransaction.fromAmount),
-      slippagePercent: swapTransaction.slippagePercent,
     });
+
+    setFromAmountInput(to);
+    setToAmountInput(from);
   };
   
   return (
@@ -56,8 +73,11 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
               placeholder="0"
               inputMode="decimal"
               pattern="[0-9]*[.,]?[0-9]*"
-              value={swapTransaction.toAmount}
-              onChange={(e) => setSwapTransaction({ ...swapTransaction, toAmount: Number(e.target.value.replace(/,/g, '.')) })}
+              value={toAmountInput}
+              onChange={(e) => {
+                const v = sanitizeDecimal(e.target.value);
+                if (v === '' || isValidDecimal(v)) setToAmountInput(v);
+              }}
               className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
             />
             {/* Receiving side does not show max */}
@@ -95,8 +115,11 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
               placeholder="0"
               inputMode="decimal"
               pattern="[0-9]*[.,]?[0-9]*"
-              value={swapTransaction.fromAmount}
-              onChange={(e) => setSwapTransaction({ ...swapTransaction, fromAmount: Number(e.target.value.replace(/,/g, '.')) })}
+              value={fromAmountInput}
+              onChange={(e) => {
+                const v = sanitizeDecimal(e.target.value);
+                if (v === '' || isValidDecimal(v)) setFromAmountInput(v);
+              }}
               className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
             />
             {/* Max balance hint */}
@@ -112,7 +135,7 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
               onClick={() => {
                 const max = balances[swapTransaction.fromToken.symbol] ?? 0;
                 const val = ((p/100) * max);
-                setSwapTransaction({ ...swapTransaction, fromAmount: Number(val.toFixed(6)) });
+                setFromAmountInput(val.toFixed(2));
               }}
               className="text-xs px-4 h-7 rounded-lg bg-[#2A2A2A] hover:bg-[#3A3A3A] text-foreground"
             >
@@ -124,7 +147,20 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
           
       {/* TODO: Add slippage input */}
 
-      <Button onClick={() => swapHandler(swapTransaction)} className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold">Swap</Button>
+      <Button
+        onClick={() =>
+          swapHandler({
+            fromToken: swapTransaction.fromToken,
+            toToken: swapTransaction.toToken,
+            fromAmount: parseInputNumber(fromAmountInput),
+            toAmount: parseInputNumber(toAmountInput),
+            slippagePercent: swapTransaction.slippagePercent,
+          })
+        }
+        className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold"
+      >
+        Swap
+      </Button>
     </div>
   );
 };

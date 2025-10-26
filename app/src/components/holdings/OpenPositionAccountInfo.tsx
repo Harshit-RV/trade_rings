@@ -28,7 +28,6 @@ const OpenPositionAccountInfo = ( { selfKey, seed } : OpenPosAccAddress ) => {
     try {
       const data = await service.program.account.openPositionAccount.fetch(selfKey)
     
-      console.log("finished computing: ", selfKey58)
       return {
         ...data,
         selfkey: selfKey,
@@ -41,7 +40,6 @@ const OpenPositionAccountInfo = ( { selfKey, seed } : OpenPosAccAddress ) => {
       try {
         const data = await programService.program.account.openPositionAccount.fetch(selfKey)
       
-        console.log("finished computing: ", selfKey58)
         return {
           ...data,
           selfkey: selfKey,
@@ -57,7 +55,7 @@ const OpenPositionAccountInfo = ( { selfKey, seed } : OpenPosAccAddress ) => {
     }
   }
 
-  const { data, isLoading } = useQuery(`account-info-${selfKey58}`, fetchAccountInfo, {
+  const { data, isLoading } = useQuery(`pos-info-${selfKey58}`, fetchAccountInfo, {
     enabled: !deadPosAccounts.includes(selfKey58)
   });
 

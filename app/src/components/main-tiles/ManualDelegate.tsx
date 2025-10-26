@@ -1,22 +1,17 @@
-import type { OpenPosAccAddress, TradingAccountForArena } from "@/anchor-program/anchor-program-service";
 import { Button } from "../ui/button";
 import useProgramServices from "@/hooks/useProgramServices";
 import useManualTradeData from "@/hooks/useManualTradeData";
+import type { Transaction } from "@solana/web3.js";
 
-interface ManualDelegateProps {
-  tradingAccount: TradingAccountForArena;
-  openPosAddresses: OpenPosAccAddress[]
-  delegateTradingAccount: () => void;
-}
 
-const ManualDelegate = ( { tradingAccount, openPosAddresses, delegateTradingAccount } : ManualDelegateProps ) => {
+const ManualDelegate = () => {
+  const { programServiceER, programService, wallet } = useProgramServices();
 
-  const { programServiceER } = useProgramServices();
-
-  const { delegationStatusByAccount, deadPosAccounts } = useManualTradeData()
+  const { arenaId, delegationStatusByAccount, deadPosAccounts, tradingAccount, openPosAddresses } = useManualTradeData()
    
   const commitAll = async () => {
-    if (!programServiceER) return
+    // TODO: centralize all these null checks
+    if (!programServiceER || !tradingAccount) return
 
     await programServiceER.commitState(String(tradingAccount.selfkey))
 
@@ -33,6 +28,42 @@ const ManualDelegate = ( { tradingAccount, openPosAddresses, delegateTradingAcco
     for (let i = 0; i < openPosAddresses.length; i++ ) {
       await programServiceER.undelegateAccount(String(openPosAddresses[i].selfKey))
     }
+  }
+
+  const delegateAll = async () => {
+    if (!programService) return
+
+    // TODO: handle state that tracks whether trading acc is delegated or not and use that state here
+    // const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
+    // if (!delegateTradeAccTx) return
+    
+    const delegatePosTxList = await Promise.all(
+      Object.keys(delegationStatusByAccount).map(async (acc) => {
+        if (deadPosAccounts.includes(acc)) return null;
+        if (delegationStatusByAccount[acc]) return null;
+
+        const position = openPosAddresses.find(pos => pos.selfKey.toBase58() === acc);
+        if (!position) return null;
+
+        return programService.delegateOpenPosAccount(arenaId, position, true) as Promise<Transaction>;
+      })
+    ).then(results => results.filter(tx => tx !== null));
+
+    const txList = [ ...delegatePosTxList ]
+
+    const signedTx = await wallet?.signAllTransactions(txList)
+    if (!signedTx) return;
+    
+    const txSigs = await Promise.all(
+      signedTx.map((tx) => programService.connection.sendRawTransaction(tx.serialize()))
+    );
+    
+    // Optional: confirm them
+    await Promise.all(
+      txSigs.map((sig) =>
+        programService.connection.confirmTransaction(sig, "confirmed")
+      )
+    );
   }
 
   return (
@@ -72,9 +103,15 @@ const ManualDelegate = ( { tradingAccount, openPosAddresses, delegateTradingAcco
         </div>
         
         <div className="flex gap-2 w-full">
-          <Button onClick={() => delegateTradingAccount()} className="bg-primary-background text-white hover:bg-primary-background/60">Delegate</Button>
-          <Button onClick={() => commitAll()} className="bg-primary-background text-white hover:bg-primary-background/60">Commit All</Button>
-          <Button onClick={() => undelegateAll()} className="bg-primary-background text-white hover:bg-primary-background/60">Undelegate all</Button>
+          <Button onClick={() => delegateAll()} className="bg-primary-background text-white hover:bg-primary-background/60">
+            Delegate All
+          </Button>
+          <Button onClick={() => commitAll()} className="bg-primary-background text-white hover:bg-primary-background/60">
+            Commit All
+          </Button>
+          <Button onClick={() => undelegateAll()} className="bg-primary-background text-white hover:bg-primary-background/60">
+            Undelegate all
+          </Button>
         </div>
       </div>
 
