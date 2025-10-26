@@ -55,18 +55,22 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
       <div className="flex flex-col gap-2">
         <div className="bg-primary-background py-12 px-8 rounded-4xl flex items-center">
           
-          <TokenSelector
-            onSelectToken={(newToToken) => setSwapTransaction((v) => {
-              return {...v, toToken: newToToken}
-            })}
-            currentToken={swapTransaction.toToken}
-            tokens={TOKENS}
-          >
-            <Button className="bg-black hover:bg-[#1A1A1A] flex-shrink-0 px-6 text-white rounded-xl gap-2">
-              <img className="size-5" src={swapTransaction.toToken.image} alt={swapTransaction.toToken.symbol} />
-              <p className="text-sm font-bold">{swapTransaction.toToken.symbol}</p>
-            </Button>
-          </TokenSelector>
+          <div className="flex flex-col gap-2 flex-shrink-0">
+            <BuySellTag text="Buying"/>
+            
+            <TokenSelector
+              onSelectToken={(newToToken) => setSwapTransaction((v) => {
+                return {...v, toToken: newToToken}
+              })}
+              currentToken={swapTransaction.toToken}
+              tokens={TOKENS}
+            >
+              <Button className="bg-black hover:bg-[#1A1A1A]  px-6 text-white rounded-xl gap-2">
+                <img className="size-5" src={swapTransaction.toToken.image} alt={swapTransaction.toToken.symbol} />
+                <p className="text-sm font-bold">{swapTransaction.toToken.symbol}</p>
+              </Button>
+            </TokenSelector>
+          </div>
           
           <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
             <input
@@ -94,20 +98,24 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
           </Button>
         </div>
 
-        <div className="bg-primary-background py-7 px-8 rounded-4xl flex items-center">
+        <div className="bg-primary-background py-10 px-8 rounded-4xl flex items-center">
           
-          <TokenSelector
-            onSelectToken={(newFromToken) => setSwapTransaction((v) => {
-              return {...v, fromToken: newFromToken}
-            })}
-            currentToken={swapTransaction.fromToken}
-            tokens={TOKENS}
-          >
-            <Button className="bg-black hover:bg-[#1A1A1A] flex-shrink-0 px-6 text-white rounded-xl gap-2">
-              <img className="size-5" src={swapTransaction.fromToken.image} alt={swapTransaction.fromToken.symbol} />
-              <p className="text-sm font-bold">{swapTransaction.fromToken.symbol}</p>
-            </Button>
-          </TokenSelector>
+          <div className="flex flex-col gap-2 flex-shrink-0">
+            <BuySellTag text="Selling"/>
+
+            <TokenSelector
+              onSelectToken={(newFromToken) => setSwapTransaction((v) => {
+                return {...v, fromToken: newFromToken}
+              })}
+              currentToken={swapTransaction.fromToken}
+              tokens={TOKENS}
+            >
+              <Button className="bg-black hover:bg-[#1A1A1A] flex-shrink-0 px-6 text-white rounded-xl gap-2">
+                <img className="size-5" src={swapTransaction.fromToken.image} alt={swapTransaction.fromToken.symbol} />
+                <p className="text-sm font-bold">{swapTransaction.fromToken.symbol}</p>
+              </Button>
+            </TokenSelector>
+          </div>
           
           
           <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
@@ -164,5 +172,11 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
     </div>
   );
 };
+
+const BuySellTag = ( { text } : { text: string } ) => {
+  return (
+    <div className="text-sm font-semibold text-gray-400">{text}</div>
+  )
+}
 
 export default SwapComponent;

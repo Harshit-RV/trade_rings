@@ -1,7 +1,6 @@
-import type { OpenPosAccAddress, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
 import useManualTradeData from "@/hooks/useManualTradeData";
 import useProgramServices from "@/hooks/useProgramServices";
-import type { DelegationStatus } from "@/types/types";
+import type { DelegationStatus, OpenPosAccAddress, OpenPositionAccount } from "@/types/types";
 import Helper from "@/utils/helper";
 import { useQuery } from "react-query";
 
@@ -9,16 +8,13 @@ import { useQuery } from "react-query";
 const OpenPositionAccountInfo = ( { selfKey, seed } : OpenPosAccAddress ) => {
   
   const { programService, getServiceForAccount } = useProgramServices();
-  const { delegationStatusByAccount, deadPosAccounts, addDeadPosAccount } = useManualTradeData();
+  const { delegationStatusByAccount, deadPosAccounts, addDeadPosAccount, addToPosMappedByAsset } = useManualTradeData();
   const selfKey58 = selfKey.toBase58();
 
   const fetchAccountInfo = async () : Promise<(OpenPositionAccount & DelegationStatus) | null>  => {
     // TODO: this check should be in useProgramServices
     if (!programService) return null;
-    if (deadPosAccounts.includes(selfKey58)) {
-      console.log("returned early because dead acc")
-      return null;
-    }
+    if (deadPosAccounts.includes(selfKey58)) return null;
 
     const isDelegated = delegationStatusByAccount[selfKey58]
 
@@ -27,7 +23,11 @@ const OpenPositionAccountInfo = ( { selfKey, seed } : OpenPosAccAddress ) => {
     
     try {
       const data = await service.program.account.openPositionAccount.fetch(selfKey)
-    
+      
+      console.log(data.asset, " (er) ", selfKey58);
+
+      addToPosMappedByAsset(data.asset, { selfKey, seed })
+      
       return {
         ...data,
         selfkey: selfKey,
@@ -39,7 +39,11 @@ const OpenPositionAccountInfo = ( { selfKey, seed } : OpenPosAccAddress ) => {
       
       try {
         const data = await programService.program.account.openPositionAccount.fetch(selfKey)
-      
+
+        console.log(data.asset, " (base) ", selfKey58);
+
+        addToPosMappedByAsset(data.asset, { selfKey, seed })
+
         return {
           ...data,
           selfkey: selfKey,

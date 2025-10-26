@@ -2,8 +2,8 @@ import { createContext, type ReactNode, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useQuery, useQueries } from "react-query";
 import useProgramServices from "@/hooks/useProgramServices";
-import type { OpenPosAccAddress, TradingAccountForArena } from "@/anchor-program/anchor-program-service";
 import { PublicKey } from "@solana/web3.js";
+import type { OpenPosAccAddress, TradingAccountForArena } from "@/types/types";
 
 type DelegationStatusMap = Record<string, boolean>;
 
@@ -15,6 +15,8 @@ interface ManualTradeDataContextValue {
   delegationStatusByAccount: DelegationStatusMap;
   isLoading: boolean;
   deadPosAccounts: string[];
+  posMappedByAsset: Map<string, OpenPosAccAddress>
+  addToPosMappedByAsset: (key: string, value: OpenPosAccAddress) => void
   addDeadPosAccount: (account: PublicKey | string) => void
   delegateTradingAcc: () => Promise<void>
 }
@@ -26,7 +28,8 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
   const { arenaId } = useParams();
   const { programService, wallet } = useProgramServices();
   
-  const [ deadPosAccount, setDeadPosAccounts ] = useState<string[]>([])
+  const [ deadPosAccounts, setDeadPosAccounts ] = useState<string[]>([])
+  const [ posMappedByAsset, setPosMappedByAsset ] = useState<Map<string, OpenPosAccAddress>>(new Map())
 
   const delegateTradingAccount = async () => {
     if (!arenaId || !programService) return
@@ -38,7 +41,14 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
     const key = typeof account === "string" ? account : account.toBase58();
     setDeadPosAccounts((val) => (val.includes(key) ? val : [...val, key]))
   }
-
+  
+  const addToPosMappedByAsset = (key: string, value: OpenPosAccAddress) => {
+    setPosMappedByAsset((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(key, value);
+      return newMap;
+    });
+  }
 
   const tradingAccountQuery = useQuery({
     queryKey: ["tradingAccount", arenaId],
@@ -102,9 +112,11 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
     openPosAddresses: openPosAddressesQuery.data ?? [],
     delegationStatusByAccount,
     isLoading: tradingAccountQuery.isLoading || openPosAddressesQuery.isLoading || isDelegationLoading,
-    deadPosAccounts: deadPosAccount,
+    deadPosAccounts: deadPosAccounts,
     addDeadPosAccount: addPosAccount,
-    delegateTradingAcc: delegateTradingAccount
+    delegateTradingAcc: delegateTradingAccount,
+    posMappedByAsset: posMappedByAsset,
+    addToPosMappedByAsset: addToPosMappedByAsset,
   };
 
   return (

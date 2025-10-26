@@ -1,6 +1,5 @@
-import type { TradingAccountForArena } from "@/anchor-program/anchor-program-service";
 import useProgramServices from "@/hooks/useProgramServices";
-import type { DelegationStatus } from "@/types/types";
+import type { DelegationStatus, TradingAccountForArena } from "@/types/types";
 import Helper from "@/utils/helper";
 import type { PublicKey } from "@solana/web3.js";
 import { useQuery } from "react-query";

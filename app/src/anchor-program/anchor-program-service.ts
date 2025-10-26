@@ -3,38 +3,7 @@ import type { EphemeralRollups } from "./types"
 import type { AnchorWallet } from "@solana/wallet-adapter-react"
 import { Connection, Keypair, PublicKey } from "@solana/web3.js"
 import { QUANTITY_SCALING_FACTOR } from "@/constants";
-
-export interface TradingAccountForArena {
-  selfkey: PublicKey;
-  authority: PublicKey;
-  openPositionsCount: number;
-  microUsdcBalance: BN;
-  bump: number;
-}
-
-export interface OpenPositionAccount {
-  selfkey: PublicKey;
-  asset: string;
-  quantityRaw: BN; // Fixed-point representation: quantity * 10^6
-  bump: number;
-  seed: number;
-}
-export interface UserProfile {
-  pubkey: PublicKey;
-  arenasCreatedCount: number;
-  bump: number;
-  name: string;
-}
-export interface ArenaAccount {
-  selfkey: PublicKey;
-  creator: PublicKey;
-  bump: number;
-}
-
-export interface OpenPosAccAddress {
-  selfKey: PublicKey,
-  seed: number
-}
+import type { ArenaAccount, OpenPosAccAddress, TradingAccountForArena, UserProfile } from "@/types/types";
 
 class AnchorProgramService {
   program: Program<EphemeralRollups>

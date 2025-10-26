@@ -24,58 +24,55 @@ const ManualTrade = () => {
   const { programServiceER } = useProgramServices();
   const queryClient = useQueryClient();
 
-  // export interface SwapTransaction {
-  //   fromToken: Token;
-  //   toToken: Token;
-  //   fromAmount: number | undefined;
-  //   toAmount: number | undefined;
-  //   slippagePercent: number;
-  // }
-  const handleSwapTransaction = async (tx: SwapTransaction) => {
+  const { tradingAccount, openPosAddresses, isLoading, posMappedByAsset } = useManualTradeData();
+
+  const handleSwapTx = async (tx: SwapTransaction) => {
     if (!arenaId || !programServiceER) return;
 
-    // TODO: derive this service
-    // const service = programServiceER;
+    const service = programServiceER;
 
-    if (tx.fromToken.symbol != "USDC" && tx.toToken.symbol != "USDC" ) {
-      toast.error("Swap is not implemented yet for this pair")
-      return;
+    if (tx.fromToken.symbol === tx.toToken.symbol) return toast.error("Select two different tokens");
+
+    // Only USDC pairs supported for now
+    if (tx.fromToken.symbol != "USDC" && tx.toToken.symbol != "USDC") return toast.error("Swap is not implemented yet for this pair");
+    
+    // TODO:  get correct price account for asset
+    const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo";
+
+   
+    if (tx.fromToken.symbol === "USDC") {
+      // buying the said asset
+      if (tx.toAmount == undefined) return toast.error("toAmount is not defined")
+
+      const pos = posMappedByAsset.get(tx.toToken.symbol)
+
+      if (pos == undefined) {
+        await service.openPositionInArena(arenaId, tx.toToken.symbol, priceAccount, tx.toAmount)
+      } else {
+        await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, tx.toAmount)
+        queryClient.invalidateQueries([`pos-info-${pos.selfKey.toBase58()}`]);
+      }
+
+    } else {
+      // selling the said asset
+      if (tx.fromAmount == undefined) return toast.error("fromAmount is not defined")
+
+      const pos = posMappedByAsset.get(tx.fromToken.symbol)
+
+      if (pos == undefined) {
+        return toast.error("You don't own this asset. Shorting is not supported")
+      } else {
+        await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, -1 * tx.fromAmount)
+        queryClient.invalidateQueries([`pos-info-${pos.selfKey.toBase58()}`]);
+      }
     }
 
-    // if (tx.toAmount == undefined) {
-    //   toast.error("Missing required field: toAmount")
-    //   return;
-    // }
-    // console.log("hello")
-    // TODO: invalidate cache of concerned POS accounts and/or Trading account
-    queryClient.invalidateQueries(['pos-info-5mBTMc4sSwcXWrZe2LmCRcbWTnX8qyzVC4HhiKbNYtYR']);
-    // const position = openPosAddresses.find(pos => pos.selfKey.toBase58() === acc);
-    // if (!position) return null;
-
-
-    // // TODO: find a more efficient way to do this
-    // // go over positions and find the positions account for this asset.
-    // const pos = openPositions.find((pos) => {
-    //   if (pos.asset == tx.toToken.symbol) return true;
-    // })
-
-    // // TODO: get correct price account for asset
-    // const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
-
-    // if (pos == undefined) {
-    //   await service.openPositionInArena(arenaId, tx.toToken.symbol, priceAccount, tx.toAmount)
-    // } else {
-    //   await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, tx.toAmount)
-    // }
-
-    // await setup(programService)
-
-    // TODO: invalidate cache of concerned POS accounts and/or Trading account
-    queryClient.invalidateQueries(['pos-info-5mBTMc4sSwcXWrZe2LmCRcbWTnX8qyzVC4HhiKbNYtYR']);
+    queryClient.invalidateQueries([`account-info-${tradingAccount?.selfkey}`]);
+    queryClient.invalidateQueries(["openPosAddresses", arenaId]);
+    toast.success("Updated")
   };
 
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   // const openNewPositionFromDelegatedTradingAccount = async () => {
   //   if (!programServiceER || !arenaId || !programService) return
 
@@ -142,7 +139,6 @@ const ManualTrade = () => {
   //   toast("done")
   // }
 
-  const { tradingAccount, openPosAddresses, isLoading } = useManualTradeData();
 
   if (isLoading) {
     return (
@@ -157,9 +153,8 @@ const ManualTrade = () => {
       </div>
       
       <div className="w-[35%]">
-        {/* <div className="bg-black text-xs overflow-auto"> {JSON.stringify(all)}</div> */}
         <SwapComponent 
-          swapHandler={handleSwapTransaction}
+          swapHandler={handleSwapTx}
           // TODO: pass proper balances here
           balances={{}}
         />
