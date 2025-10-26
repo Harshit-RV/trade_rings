@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useMemo } from "react";
+import { createContext, type ReactNode, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useQuery, useQueries } from "react-query";
 import useProgramServices from "@/hooks/useProgramServices";
@@ -13,8 +13,8 @@ interface ManualTradeDataContextValue {
   openPosAddresses: OpenPosAccAddress[];
   delegationStatusByAccount: DelegationStatusMap;
   isLoading: boolean;
-  // deadPosAccounts: PublicKey[];
-  // addDeadPosAccount: (account: PublicKey) => void
+  deadPosAccounts: string[];
+  addDeadPosAccount: (account: PublicKey | string) => void
 }
 
 const ManualTradeDataContext = createContext<ManualTradeDataContextValue | null>(null);
@@ -23,10 +23,13 @@ const ManualTradeDataContext = createContext<ManualTradeDataContextValue | null>
 export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) => {
   const { arenaId } = useParams();
   const { programService, wallet } = useProgramServices();
-  // const [ deadPosAccount, setDeadPosAccounts ] = useState<PublicKey[]>([])
-  // const addPosAccount = (account: PublicKey) => {
-  //   setDeadPosAccounts((val) => [...val, account])
-  // }
+  
+  const [ deadPosAccount, setDeadPosAccounts ] = useState<string[]>([])
+  
+  const addPosAccount = (account: PublicKey | string) => {
+    const key = typeof account === "string" ? account : account.toBase58();
+    setDeadPosAccounts((val) => (val.includes(key) ? val : [...val, key]))
+  }
 
 
   const tradingAccountQuery = useQuery({
@@ -89,8 +92,8 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
     openPosAddresses: openPosAddressesQuery.data ?? [],
     delegationStatusByAccount,
     isLoading: tradingAccountQuery.isLoading || openPosAddressesQuery.isLoading || isDelegationLoading,
-    // deadPosAccounts: deadPosAccount,
-    // addDeadPosAccount: addPosAccount,
+    deadPosAccounts: deadPosAccount,
+    addDeadPosAccount: addPosAccount,
   };
 
   return (

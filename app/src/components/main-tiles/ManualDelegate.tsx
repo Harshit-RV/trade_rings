@@ -13,7 +13,7 @@ const ManualDelegate = ( { tradingAccount, openPosAddresses, delegateTradingAcco
 
   const { programServiceER } = useProgramServices();
 
-  const { delegationStatusByAccount } = useManualTradeData()
+  const { delegationStatusByAccount, deadPosAccounts } = useManualTradeData()
    
   const commitAll = async () => {
     if (!programServiceER) return
@@ -37,7 +37,7 @@ const ManualDelegate = ( { tradingAccount, openPosAddresses, delegateTradingAcco
 
   return (
     <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      <h2 className="text-md font-bold mb-2">Execution Engine</h2>
+      <h2 className="text-md font-bold mb-2">Execution Engine:</h2>
 
       <div className="flex flex-col gap-3">
         {/* {
@@ -48,14 +48,26 @@ const ManualDelegate = ( { tradingAccount, openPosAddresses, delegateTradingAcco
         {/* <span className="text-sm text-gray-400">We execute all your trades in a rollup to ensure low latency and high throughput.</span> 
         <span className="text-sm text-gray-400">Fix sync issues between Execution engine and Solana base layer .</span>  */}
         
-        <div>
-          <div>Undelegated Accounts</div>
-          <div className="flex flex-col gap-0.5">
-            {
-              Object.keys(delegationStatusByAccount).map((acc) => (
-                !delegationStatusByAccount[acc] && <div className="bg-primary-background text-xs rounded-lg px-4 py-2">{acc.slice(0, 5)}..{acc.slice(-10, -1)}</div>
-              ))
-            }
+        <div className="flex gap-2">
+          <div>
+            <div className="text-sm">Undelegated</div>
+            <div className="flex flex-col bg-primary-background rounded-2xl px-4 gap-0.5 py-2 ">
+              {
+                Object.keys(delegationStatusByAccount).map((acc) => (
+                  (!delegationStatusByAccount[acc] && !deadPosAccounts.includes(acc)) && <div className="text-xs">{acc.slice(0, 5)}..{acc.slice(-10, -1)}</div>
+                ))
+              }
+            </div>
+          </div>
+          <div>
+            <div className="text-sm">Dead</div>
+            <div className="flex flex-col bg-primary-background rounded-2xl px-4 gap-0.5 py-2 ">
+              {
+                deadPosAccounts.map((acc) => (
+                  <div key={acc} className="text-xs">{acc.slice(0,5)}..{acc.slice(-10,-1)}</div>
+                ))
+              }
+            </div>
           </div>
         </div>
         

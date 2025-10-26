@@ -64,9 +64,9 @@ const TradingAccountInfo = ( { account } : TradingAccountInfoProps ) => {
   }
 
   return (
-    <div className="text-2xl font-bold mb-6 bg-[#1F1F1F] p-2 rounded-lg">
+    <div className="text-2xl flex justify-between items-center gap-4 font-bold mb-6 bg-[#1F1F1F] p-2 rounded-lg">
       $ {Helper.formatMiniUsdcBalance(data.microUsdcBalance)} 
-      <span className="ml-1 text-xs">{data.isDelegated ? "(ER)" : "(base)"}</span>
+      <div className={`size-3 rounded ${data.isDelegated ? "bg-green-500" : "bg-yellow-500"}`} />
     </div>
   )
 }

@@ -9,7 +9,6 @@ import Leaderboard from "@/components/main-tiles/Leaderboard";
 import ManualDelegate from "@/components/main-tiles/ManualDelegate";
 import { ManualTradeDataProvider } from "@/contexts/ManualTradeDataContext";
 import toast from "react-hot-toast";
-import { Button } from "@/components/ui/button";
 import useProgramServices from "@/hooks/useProgramServices";
 import useManualTradeData from "@/hooks/useManualTradeData";
 
@@ -72,6 +71,7 @@ const ManualTrade = () => {
     await programService.delegateOpenPosAccount(arenaId, position);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const openNewPositionFromDelegatedTradingAccount = async () => {
     if (!programServiceER || !arenaId || !programService) return
 
@@ -165,7 +165,7 @@ const ManualTrade = () => {
         tradingAccount && (
           <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
 
-            <Button onClick={() => openNewPositionFromDelegatedTradingAccount()}>Open Brand new pos</Button>
+            {/* <Button onClick={() => openNewPositionFromDelegatedTradingAccount()}>Open Brand new pos</Button> */}
             
             <ManualDelegate 
               tradingAccount={tradingAccount} 
