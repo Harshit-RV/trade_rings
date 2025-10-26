@@ -1,9 +1,8 @@
-import { createContext, type ReactNode } from "react";
+import { createContext, type ReactNode, useMemo } from "react";
 import { useParams } from "react-router";
-import { useQuery } from "react-query";
+import { useQuery, useQueries } from "react-query";
 import useProgramServices from "@/hooks/useProgramServices";
 import type { OpenPosAccAddress, TradingAccountForArena } from "@/anchor-program/anchor-program-service";
-import type AnchorProgramService from "@/anchor-program/anchor-program-service";
 import { PublicKey } from "@solana/web3.js";
 
 type DelegationStatusMap = Record<string, boolean>;
@@ -29,24 +28,6 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
   //   setDeadPosAccounts((val) => [...val, account])
   // }
 
-  const fetchDelegationStatuses = async (service: AnchorProgramService, addresses: string[]): Promise<DelegationStatusMap> => {
-    console.log("I stated with: ", addresses)
-    console.time('fetchDelegationStatuses');
-    const entries = await Promise.all(
-      addresses.map(async (addr) => {
-        try {
-          const isDel = await service.isAccountDelegated(new PublicKey(addr));
-          return [addr, isDel] as const;
-        } catch {
-          return [addr, false] as const;
-        }
-      })
-    );
-    const result = Object.fromEntries(entries);
-    console.log(result)
-    console.timeEnd('fetchDelegationStatuses');
-    return result;
-  };
 
   const tradingAccountQuery = useQuery({
     queryKey: ["tradingAccount", arenaId],
@@ -68,29 +49,46 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
     staleTime: 15_000,
   });
 
-  const delegationStatusQuery = useQuery({
-    queryKey: ["delegationStatus", arenaId],
-    queryFn: async () => {
-      if (!programService) return {} as DelegationStatusMap;
-      const addresses: string[] = [];
-      const ta = tradingAccountQuery.data?.selfkey?.toBase58();
-      if (ta) addresses.push(ta);
-      if (openPosAddressesQuery.data) {
-        addresses.push(...openPosAddressesQuery.data.map((a) => a.selfKey.toBase58()));
-      }
-      if (addresses.length === 0) return {} as DelegationStatusMap;
-      return fetchDelegationStatuses(programService, addresses);
-    },
-    enabled: !!programService && (!!tradingAccountQuery.data || !!openPosAddressesQuery.data?.length),
-    staleTime: 15_000,
-  });
+  const addresses = useMemo(() => {
+    const list: string[] = [];
+    const ta = tradingAccountQuery.data?.selfkey?.toBase58();
+    if (ta) list.push(ta);
+    if (openPosAddressesQuery.data?.length) {
+      list.push(...openPosAddressesQuery.data.map((a) => a.selfKey.toBase58()));
+    }
+    return list;
+  }, [tradingAccountQuery.data, openPosAddressesQuery.data]);
+
+  const delegationQueries = useQueries(
+    addresses.map((addr) => ({
+      queryKey: ["delegationStatus", arenaId, addr],
+      queryFn: async () => {
+        if (!programService) return false;
+        try {
+          return await programService.isAccountDelegated(new PublicKey(addr));
+        } catch {
+          return false;
+        }
+      },
+      enabled: !!programService && !!addr,
+      staleTime: 15_000,
+    }))
+  );
+
+  const delegationStatusByAccount: DelegationStatusMap = useMemo(() => {
+    if (!delegationQueries?.length) return {} as DelegationStatusMap;
+    const entries = addresses.map((addr, idx) => [addr, delegationQueries[idx]?.data ?? false] as const);
+    return Object.fromEntries(entries);
+  }, [addresses, delegationQueries]);
+
+  const isDelegationLoading = delegationQueries.some((q) => q.isLoading);
 
   const value: ManualTradeDataContextValue = {
     tradingAccount: tradingAccountQuery.data ?? null,
     tradingAccountKey: tradingAccountQuery.data?.selfkey?.toBase58() ?? null,
     openPosAddresses: openPosAddressesQuery.data ?? [],
-    delegationStatusByAccount: delegationStatusQuery.data ?? {},
-    isLoading: tradingAccountQuery.isLoading || openPosAddressesQuery.isLoading || delegationStatusQuery.isLoading,
+    delegationStatusByAccount,
+    isLoading: tradingAccountQuery.isLoading || openPosAddressesQuery.isLoading || isDelegationLoading,
     // deadPosAccounts: deadPosAccount,
     // addDeadPosAccount: addPosAccount,
   };
