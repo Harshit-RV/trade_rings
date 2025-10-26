@@ -1,4 +1,4 @@
-import type { TradingAccountForArena, OpenPosAccAddress } from "@/anchor-program/anchor-program-service";
+import type { OpenPosAccAddress, TradingAccountForArena } from "@/types/types";
 import OpenPositionAccountInfo from "./OpenPositionAccountInfo";
 import TradingAccountInfo from "./TradingAccountInfo";
 
