@@ -37,6 +37,7 @@ pub mod ephemeral_rollups {
     use super::*;
     // admin functions
     pub fn initialize_admin_config_account(ctx: Context<InitAdminConfigAccount>) -> Result<()> {
+        #[cfg(not(feature = "test-admin"))]
         require_keys_eq!(ctx.accounts.signer.key(), ORIGINAL_OWNER.parse::<Pubkey>().unwrap(), EphemeralRollupError::Unauthorised);
 
         let admin_config = &mut ctx.accounts.admin_config_account;

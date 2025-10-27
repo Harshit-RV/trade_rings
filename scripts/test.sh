@@ -1,1 +1,1 @@
-anchor test --skip-local-validator --skip-deploy
+anchor test --skip-local-validator --skip-deploy -- --features test-admin

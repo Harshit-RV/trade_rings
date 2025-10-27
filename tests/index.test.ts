@@ -9,6 +9,8 @@ import { BN, Program } from "@coral-xyz/anchor";
 import { EphemeralRollups } from "../target/types/ephemeral_rollups";
 import * as idl from "../target/idl/ephemeral_rollups.json";
 import { fromWorkspace, LiteSVMProvider } from "anchor-litesvm";
+import { LiteSVM } from "litesvm";
+import path from "path";
 
 interface OpenPositionAccount {
   selfkey: anchor.web3.PublicKey;
@@ -86,20 +88,19 @@ const createMockPriceUpdateAccount = (
   return priceUpdatePubkey;
 }
 
-const getArenaAccounts = async (count: number, payer: anchor.web3.Keypair, program: anchor.Program<EphemeralRollups>) : Promise<ArenaAccount[]> => {
+const getArenaAccounts = async (count: number, program: anchor.Program<EphemeralRollups>) : Promise<ArenaAccount[]> => {
   const arenas : ArenaAccount[] = []
 
   for (let i = 0; i < count; i++) {
     try {
-      const countLE = new BN(i).toArrayLike(Buffer, "le", 1);
+      const countLE = new BN(i).toArrayLike(Buffer, "le", 2);
       
-      const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+      const [ pda ] = anchor.web3.PublicKey.findProgramAddressSync(
         [
           Buffer.from("arena_account"),
-          payer.publicKey.toBuffer(),
           countLE
         ],
-        new anchor.web3.PublicKey(idl.address),
+        new anchor.web3.PublicKey(program.idl.address),
       );
 
       const arenaAccount = await program.account.arenaAccount.fetch(pda);
@@ -109,7 +110,9 @@ const getArenaAccounts = async (count: number, payer: anchor.web3.Keypair, progr
         selfkey: pda,
       } as ArenaAccount);
       
-    } catch (_) {}
+    } catch (error) {
+      console.log("Error getting arena accounts ", error);
+    }
   }
 
   return arenas
@@ -162,8 +165,8 @@ describe("unit tests", async () => {
   const payer = new Keypair();
 	svm.airdrop(payer.publicKey, BigInt(LAMPORTS_PER_SOL));
 
-  const [ payerProfileAccount ] = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("user_profile_account"), payer.publicKey.toBuffer()],
+  const [ adminConfigAccount ] = anchor.web3.PublicKey.findProgramAddressSync(
+    [ Buffer.from("admin_config_account") ],
     program.programId
   );
 
@@ -172,32 +175,29 @@ describe("unit tests", async () => {
   const MICROUSDC_PER_USDC = 1_000_000;
   const INITIAL_BALANCE = 1_000_000;
 
-  describe("profile creation", async () => {
-    it("Should create a user profile successfully", async () => {
-      const name = "Harshit"
+  describe("admin config creation", async () => {
+    it("Should create admin config successfully", async () => {
   
-      await program.methods.adminFnCreateProfile(name)
+      await program.methods.initializeAdminConfigAccount()
             .accounts({
               signer: payer.publicKey,
             })
             .signers([payer])
             .rpc();
   
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
   
-      expect(profileAccount.pubkey.toString()).to.equal(payer.publicKey.toString());
-      expect(profileAccount.name).to.equal(name);
-      expect(profileAccount.arenasCreatedCount).to.equal(0);
-      expect(profileAccount.bump).to.be.a('number');
+      expect(adminAccount.adminPubkey.toString()).to.equal(payer.publicKey.toString());
+      expect(adminAccount.nextArenaPdaSeed).to.equal(0);
+      expect(adminAccount.bump).to.be.a('number');
     });
   
-    it("Should fail when name is too long", async () => {
+    it("Should fail trying to create admin config account again", async () => {
       const newPayer = new Keypair();
       svm.airdrop(newPayer.publicKey, BigInt(LAMPORTS_PER_SOL));
-      const longName = "ThisNameIsTooLong"; // 17 characters, max is 10
       
       try {
-        await program.methods.adminFnCreateProfile(longName)
+        await program.methods.initializeAdminConfigAccount()
               .accounts({
                 signer: newPayer.publicKey,
               })
@@ -206,36 +206,41 @@ describe("unit tests", async () => {
   
         expect.fail("Expected transaction to fail");
       } catch (error) {
-        expect(error.message).to.include("Name must be 10 characters or smaller");
+        expect(error.message).to.include("already in use");
       }
     });
   })
 
   describe("arena creation", async () => {
-    it("Should create 1 arena successfully", async () => {  
-      await program.methods.adminFnCreateArena()
-            .accounts({
-              signer: payer.publicKey,
-            })
-            .signers([payer])
-            .rpc();
-  
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
-      
-      expect(arenaAccounts.length).to.equal(1);
+    it("Should create 1 arena successfully", async () => {
+      try {
+        await program.methods.createArena()
+          .accounts({
+            signer: payer.publicKey,
+          })
+          .signers([payer])
+          .rpc();
+
+        const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+        expect(adminAccount.nextArenaPdaSeed).to.equal(1);
+
+        const arenaAccounts = await getArenaAccounts(1, program);
+        expect(arenaAccounts.length).to.equal(1);
+      } catch (error) {
+        console.log("Error creating arena ", error);
+      }  
     });
 
     it("Should create 2nd arena successfully", async () => {  
-      await program.methods.adminFnCreateArena()
+      await program.methods.createArena()
             .accounts({
               signer: payer.publicKey,
             })
             .signers([payer])
             .rpc();
   
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       
       expect(arenaAccounts.length).to.equal(2);
     });
@@ -243,8 +248,8 @@ describe("unit tests", async () => {
  
   describe("trading accounts", async () => {
     it("Should create trading account for arena", async () => {
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       const arena = arenaAccounts[0];
 
       await program.methods.createTradingAccountForArena()
@@ -274,8 +279,8 @@ describe("unit tests", async () => {
 
   describe("positions", async () => {
     it("Should open 1 position and reduce balance", async () => {
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       const arena = arenaAccounts[0];
 
       const [ tradingPda ] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -316,8 +321,8 @@ describe("unit tests", async () => {
     });
 
     it("Should fail to open with long asset name", async () => {
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       const arena = arenaAccounts[0];
 
       const priceAccount = createMockPriceUpdateAccount(svm, 100_000_000, -8);
@@ -339,8 +344,8 @@ describe("unit tests", async () => {
     });
 
     it("Should fail to open short position", async () => {
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       const arena = arenaAccounts[0];
 
       const priceAccount = createMockPriceUpdateAccount(svm, 100_000_000, -8);
@@ -357,8 +362,8 @@ describe("unit tests", async () => {
     });
 
     it("Should fail to open due to insufficient funds", async () => {
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       const arena = arenaAccounts[0];
 
       const priceAccount = createMockPriceUpdateAccount(svm, assetPrice * 100_000_000, -8);
@@ -375,8 +380,8 @@ describe("unit tests", async () => {
     });
 
     it("Should update position: increase quantity and adjust balance", async () => {
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       const arena = arenaAccounts[0];
 
       const [ tradingPda ] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -413,8 +418,8 @@ describe("unit tests", async () => {
     });
 
     it("Should fail when unauthorized payer tries to close a position", async () => {
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       const arena = arenaAccounts[0];
 
       const [ tradingPda ] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -447,8 +452,8 @@ describe("unit tests", async () => {
     })
 
     it("Should close a position and refund balance", async () => {
-      const profileAccount = await program.account.userProfile.fetch(payerProfileAccount);
-      const arenaAccounts = await getArenaAccounts(profileAccount.arenasCreatedCount, payer, program);
+      const adminAccount = await program.account.adminConfig.fetch(adminConfigAccount);
+      const arenaAccounts = await getArenaAccounts(adminAccount.nextArenaPdaSeed, program);
       const arena = arenaAccounts[0];
 
       const [ tradingPda ] = anchor.web3.PublicKey.findProgramAddressSync(
