@@ -373,6 +373,40 @@
       "args": []
     },
     {
+      "name": "commit_account",
+      "discriminator": [
+        158,
+        250,
+        53,
+        28,
+        25,
+        111,
+        26,
+        155
+      ],
+      "accounts": [
+        {
+          "name": "account",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magic_context",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "create_trading_account_for_arena",
       "discriminator": [
         163,
@@ -438,6 +472,396 @@
           "name": "signer",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "delegate_open_position_account",
+      "discriminator": [
+        168,
+        48,
+        50,
+        194,
+        180,
+        225,
+        65,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "buffer_open_position_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "open_position_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                160,
+                115,
+                15,
+                210,
+                171,
+                9,
+                33,
+                79,
+                33,
+                129,
+                103,
+                160,
+                75,
+                222,
+                196,
+                72,
+                48,
+                188,
+                13,
+                117,
+                127,
+                3,
+                86,
+                12,
+                65,
+                5,
+                251,
+                190,
+                42,
+                143,
+                108,
+                183
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegation_record_open_position_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "open_position_account"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "delegation_metadata_open_position_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "open_position_account"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "open_position_account",
+          "writable": true
+        },
+        {
+          "name": "owner_program",
+          "address": "BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop"
+        },
+        {
+          "name": "delegation_program",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "trading_account",
+          "type": "pubkey"
+        },
+        {
+          "name": "pda_position_seed",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "delegate_trading_account",
+      "discriminator": [
+        81,
+        32,
+        231,
+        28,
+        213,
+        71,
+        26,
+        191
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "buffer_trading_account_for_arena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "trading_account_for_arena"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                160,
+                115,
+                15,
+                210,
+                171,
+                9,
+                33,
+                79,
+                33,
+                129,
+                103,
+                160,
+                75,
+                222,
+                196,
+                72,
+                48,
+                188,
+                13,
+                117,
+                127,
+                3,
+                86,
+                12,
+                65,
+                5,
+                251,
+                190,
+                42,
+                143,
+                108,
+                183
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegation_record_trading_account_for_arena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "trading_account_for_arena"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "delegation_metadata_trading_account_for_arena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "trading_account_for_arena"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "trading_account_for_arena",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  102,
+                  111,
+                  114,
+                  95,
+                  97,
+                  114,
+                  101,
+                  110,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              },
+              {
+                "kind": "account",
+                "path": "arena_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "arena_account"
+        },
+        {
+          "name": "owner_program",
+          "address": "BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop"
+        },
+        {
+          "name": "delegation_program",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
         },
         {
           "name": "system_program",
@@ -578,6 +1002,77 @@
           "type": "i64"
         }
       ]
+    },
+    {
+      "name": "process_undelegation",
+      "discriminator": [
+        196,
+        28,
+        41,
+        206,
+        48,
+        37,
+        51,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "base_account",
+          "writable": true
+        },
+        {
+          "name": "buffer"
+        },
+        {
+          "name": "payer",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "account_seeds",
+          "type": {
+            "vec": "bytes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "undelegate",
+      "discriminator": [
+        131,
+        148,
+        180,
+        198,
+        91,
+        104,
+        42,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "account",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magic_context",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": []
     },
     {
       "name": "update_position",

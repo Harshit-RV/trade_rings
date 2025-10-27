@@ -1,43 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
-import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
-import type { EphemeralRollups } from "@/anchor-program/types";
-import idl from "@/anchor-program/idl.json";
-import AnchorProgramService from "@/anchor-program/anchor-program-service";
-import { ArenaCard } from "@/components/ArenaCard.tsx";
+import { useEffect, useState } from "react";
+import { ArenaCard } from "../components/ArenaCard";
+import useProgramServices from "@/hooks/useProgramServices";
 
 
 const ArenaList = () => {
-  const { connection } = useConnection();
-  const wallet = useAnchorWallet();
+  const { programService } = useProgramServices()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ arenas, setArenas ] = useState<any[]>([])
 
-  const provider = useMemo(() => {
-    if (!wallet) return null;
-    return new AnchorProvider(connection, wallet, { commitment: "processed" });
-  }, [connection, wallet]);
-
-  const program = useMemo(() => {
-    if (!provider) return null;
-    setProvider(provider);
-    return new Program<EphemeralRollups>(idl as EphemeralRollups, provider);
-  }, [provider]);
-
-  const anchorProgramService = useMemo(() => {
-    if (!program || !wallet) return null;
-    return new AnchorProgramService(program, wallet, idl.address);
-  }, [program, wallet]);
-
   const setup = async () => {
-    if (!anchorProgramService) {
-      console.log("Missing required data:", { hasProgram: !!program, hasWallet: !!wallet });
+    if (!programService) {
+      console.log("Missing required data:", { hasProgram: !!programService});
       return;
     }
 
     try {
-      const arenaList = await anchorProgramService.fetchUserArenas();
+      const arenaList = await programService.fetchUserArenas();
 
       if (!arenaList) return
       const arenaListTemp=arenaList!.map((arena,index)=>{return  {name:`Arena ${index+1}`,
@@ -55,7 +34,7 @@ const ArenaList = () => {
 
   useEffect(() => {
     setup();
-  }, [anchorProgramService])
+  }, [programService])
  
    
   return (

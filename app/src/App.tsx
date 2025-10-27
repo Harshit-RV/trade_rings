@@ -1,11 +1,11 @@
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import AnchorInteractor from './components/AnchorInteractor';
+// import AnchorInteractor from './components/AnchorInteractor';
 import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Link } from 'react-router';
 import { useEffect } from 'react';
 import ManualTrade from './pages/ManualTrade';
 import ArenaList from './pages/ArenaList';
-import Breadcrumb from './components/Breadcrumb';
+import Breadcrumb from './components/common/Breadcrumb';
 import TradeTabs from './components/TradeTabs';
 
 
@@ -33,8 +33,8 @@ const App = () => {
       </div>
       <Routes>
         <Route path='/' element={<ArenaList />} />  
-        <Route path='docs' element={<AnchorInteractor />} />  
-        <Route path='/trade/:arenaId' element={<ManualTrade />} />  
+        {/* <Route path='docs' element={<AnchorInteractor />} />   */}
+        <Route path='/trade/:arenaId' element={ <ManualTrade />} />  
       </Routes>
     </div>
   );

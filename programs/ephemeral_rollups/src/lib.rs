@@ -1,6 +1,12 @@
+#![allow(unexpected_cfgs)]
+#![allow(deprecated)]
 use anchor_lang::prelude::*;
 pub mod errors;
 use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2};
+
+use ephemeral_rollups_sdk::anchor::{commit, delegate, ephemeral};
+use ephemeral_rollups_sdk::cpi::DelegateConfig;
+use ephemeral_rollups_sdk::ephem::{commit_accounts, commit_and_undelegate_accounts};
 
 declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
 
@@ -8,6 +14,8 @@ pub const PROFILE_ACCOUNT_SEED: &[u8] = b"user_profile_account";
 pub const ARENA_ACCOUNT_SEED: &[u8] = b"arena_account";
 pub const TRADING_ACCOUNT_SEED: &[u8] = b"trading_account_for_arena";
 pub const OPEN_POSITION_ACCOUNT_SEED: &[u8] = b"open_position_account";
+
+pub const ER_VALIDATOR_ACCOUNT_ASIA: &str = "MAS1Dt9qreoRMQ14YQuhg8UTZMMzDdKhmkZMECCzk57";
 
 // Fixed-point scale factor: 10^6
 // This means 1 BTC is stored as 1,000,000 units
@@ -20,6 +28,7 @@ fn get_total_cost(price: i64, exponent: i32, quantity_scaled: i64) -> i128 {
     (current_price as i128 * quantity_scaled as i128) / QUANTITY_SCALE_FACTOR as i128
 }
 
+#[ephemeral]
 #[program]
 pub mod ephemeral_rollups {
     use crate::errors::EphemeralRollupError;
@@ -132,6 +141,78 @@ pub mod ephemeral_rollups {
 
     // TODO: for loop that gets all open_position_accounts and closes them
     pub fn close_all_positions(_ctx: Context<OpenPosition>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn delegate_trading_account(ctx: Context<DelegateTradingAccount>) -> Result<()> {
+        let arena_account = &ctx.accounts.arena_account;
+        let signer = &ctx.accounts.signer;
+        let trading_account = &ctx.accounts.trading_account_for_arena;
+
+        ctx.accounts.delegate_trading_account_for_arena(
+            signer,
+            &[TRADING_ACCOUNT_SEED, signer.key().as_ref(), arena_account.key().as_ref()],
+            DelegateConfig {
+                // TODO: figure out the value of this, and what it does
+                commit_frequency_ms: 30_000,
+                validator: Some(
+                    ER_VALIDATOR_ACCOUNT_ASIA.parse::<Pubkey>().unwrap(),
+                ),
+                ..Default::default()
+            },
+        )?;
+
+        msg!("Trading account {} delegated to Ephemeral Rollup validator", trading_account.key());
+        Ok(())
+    }
+    
+    pub fn delegate_open_position_account(ctx: Context<DelegateOpenPositionAccount>, trading_account: Pubkey, pda_position_seed: u8) -> Result<()> {
+        let signer = &ctx.accounts.signer;
+        let position_account =  &ctx.accounts.open_position_account;
+
+        ctx.accounts.delegate_open_position_account(
+            signer,
+            &[OPEN_POSITION_ACCOUNT_SEED, signer.key().as_ref(), trading_account.key().as_ref(), &pda_position_seed.to_le_bytes()],
+            DelegateConfig {
+                // TODO: figure out the value of this, and what it does
+                commit_frequency_ms: 30_000,
+                validator: Some(
+                    ER_VALIDATOR_ACCOUNT_ASIA.parse::<Pubkey>().unwrap(),
+                ),
+                ..Default::default()
+            },
+        )?;
+
+        msg!("Open position account {} delegated to Ephemeral Rollup validator", position_account.key());
+        Ok(())
+    }
+
+    // TODO: check how we can use this to commit multiple accounts at once, as it's taking a vector of accounts as input
+    pub fn commit_account(ctx: Context<CommitOrUndelegateAccount>) -> Result<()> {
+        let account = &ctx.accounts.account;
+        
+        commit_accounts(
+            &ctx.accounts.signer,
+            vec![&account.to_account_info()],
+            &ctx.accounts.magic_context,
+            &ctx.accounts.magic_program,
+        )?;
+
+        msg!("State of account {} committed to base layer", account.key);
+        Ok(())
+    }
+
+    pub fn undelegate(ctx: Context<CommitOrUndelegateAccount>) -> Result<()> {
+        let account = &ctx.accounts.account;
+
+        commit_and_undelegate_accounts(
+            &ctx.accounts.signer,
+            vec![&account.to_account_info()],
+            &ctx.accounts.magic_context,
+            &ctx.accounts.magic_program,
+        )?;
+
+        msg!("Account {} undelegated", account.key);
         Ok(())
     }
 }
@@ -301,6 +382,45 @@ pub struct ClosePosition<'info> {
     pub price_update: Account<'info, PriceUpdateV2>,
 
     pub arena_account: Account<'info, ArenaAccount>,
+
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
+#[delegate]
+#[derive(Accounts)]
+pub struct DelegateTradingAccount<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(
+        mut,
+        del,
+        seeds = [TRADING_ACCOUNT_SEED, signer.key().as_ref(), arena_account.key().as_ref()],
+        bump = trading_account_for_arena.bump
+    )]
+    pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
+
+    pub arena_account: Account<'info, ArenaAccount>,
+}
+
+#[delegate]
+#[derive(Accounts)]
+pub struct DelegateOpenPositionAccount<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(mut, del)]
+    pub open_position_account: Account<'info, OpenPositionAccount>,
+}
+
+
+#[commit]
+#[derive(Accounts)]
+pub struct CommitOrUndelegateAccount<'info> {
+    /// CHECK:` This is a generic context which can be used to committing/undelegating any account of any type.
+    #[account(mut)]
+    pub account: AccountInfo<'info>,
 
     #[account(mut)]
     pub signer: Signer<'info>,

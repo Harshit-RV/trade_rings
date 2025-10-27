@@ -10,6 +10,14 @@ export const TOKENS: Token[] = [
     decimals: 6,
   },
   {
+    symbol: "BTC",
+    name: "Bitcoin",
+    address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    price: 1.00,
+    image: "https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png",
+    decimals: 6,
+  },
+  {
     symbol: "SOL",
     name: "Solana",
     address: "So11111111111111111111111111111111111111112",
@@ -79,6 +87,22 @@ export const TOKENS: Token[] = [
     address: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
     price: 0.89,
     image: "https://s2.coinmarketcap.com/static/img/coins/200x200/29304.png",
+    decimals: 6,
+  },
+  {
+    symbol: "SKR",
+    name: "Seeker",
+    address: "JKRyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+    price: 0.89,
+    image: "https://s2.coinmarketcap.com/static/img/coins/200x200/28600.png",
+    decimals: 6,
+  },
+  {
+    symbol: "HRV",
+    name: "Harshit RV",
+    address: "HRVyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+    price: 0.89,
+    image: "https://s2.coinmarketcap.com/static/img/coins/200x200/28600.png",
     decimals: 6,
   },
 ];

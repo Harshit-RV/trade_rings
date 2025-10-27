@@ -1,100 +1,175 @@
-// import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
-import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
-import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
-import type { EphemeralRollups } from "@/anchor-program/types";
-import idl from "@/anchor-program/idl.json";
-import { MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
-import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
-import AnchorProgramService from "@/anchor-program/anchor-program-service";
-import { TOKENS } from "@/data/tokens";
-import HoldingsChart from "@/components/HoldingsChart";
-import SwapComponent from "@/components/main-tiles/SwapComponent";
-import Holdings from "@/components/main-tiles/Holdings";
+import SwapComponent from "@/components/trade/SwapComponent";
+import Holdings from "@/components/holdings/Holdings";
 import Leaderboard from "@/components/main-tiles/Leaderboard";
-import type { SwapTransaction } from "@/types/types";
+// import type { SwapTransaction } from "@/types/types";
+import ManualDelegate from "@/components/main-tiles/ManualDelegate";
+import { ManualTradeDataProvider } from "@/contexts/ManualTradeDataContext";
+import toast from "react-hot-toast";
+import { useState } from "react";
+import useProgramServices from "@/hooks/useProgramServices";
+import useManualTradeData from "@/hooks/useManualTradeData";
+import type { OpenPosAccAddress, SwapTransaction } from "@/types/types";
+import { useQueryClient } from "react-query";
+import { BN } from "@coral-xyz/anchor";
+import { PublicKey, Transaction } from "@solana/web3.js";
 
+const ManualTradeWrapper = () => {
+  return (
+    <ManualTradeDataProvider>
+      <ManualTrade/>
+    </ManualTradeDataProvider>
+  )
+}
 
 const ManualTrade = () => {
   const { arenaId } = useParams();
-  const { connection } = useConnection();
-  const wallet = useAnchorWallet();
+  const { programServiceER, programService, wallet } = useProgramServices();
+  const queryClient = useQueryClient();
 
-  const [ tradingAccount, setTradingAccount ] = useState<TradingAccountForArena | null>(null);
-  const [ openPositions, setOpenPositions ] = useState<OpenPositionAccount[]>([]);
-  
-  const provider = useMemo(() => {
-    if (!wallet) return null;
-    return new AnchorProvider(connection, wallet, { commitment: "processed" });
-  }, [connection, wallet]);
+  const { tradingAccount, openPosAddresses, isLoading, posMappedByAsset } = useManualTradeData();
 
-  const program = useMemo(() => {
-    if (!provider) return null;
-    setProvider(provider);
-    return new Program<EphemeralRollups>(idl as EphemeralRollups, provider);
-  }, [provider]);
+  // open new position flow
+  const [ openNewPosRequired, setOpenNewPosRequired ] = useState(false);
+  const [ newPosAsset, setNewPosAsset ] = useState<string | null>(null);
+  const [ newPosAmount, setNewPosAmount ] = useState<number>(0);
+  const [ step1Done, setStep1Done ] = useState(false);
+  const [ step1InProgress, setStep1InProgress ] = useState(false);
+  const [ step2InProgress, setStep2InProgress ] = useState(false);
 
-  const anchorProgramService = useMemo(() => {
-    if (!program || !wallet) return null;
-    return new AnchorProgramService(program, wallet, idl.address);
-  }, [program, wallet]);
+  const handleSwapTx = async (tx: SwapTransaction) => {
+    if (!arenaId || !programServiceER) return;
 
-  const setup = async () => {
-    if (!arenaId || !anchorProgramService) {
-      console.log("Missing required data:", { arenaId, hasProgram: !!program, hasWallet: !!wallet });
-      return;
-    }
+    const service = programServiceER;
 
-    try {
-      const arenaPubkey = new PublicKey(arenaId);
-      const tradeAccount = await anchorProgramService.fetchTradingAccountForArena(arenaPubkey);
+    if (tx.fromToken.symbol === tx.toToken.symbol) return toast.error("Select two different tokens");
 
-      if (!tradeAccount) return
-      
-      setTradingAccount(tradeAccount);
-      
-      const positions = await anchorProgramService.fetchOpenPositionsForTradingAccount(tradeAccount);
-      if (positions) setOpenPositions(positions);
+    // Only USDC pairs supported for now
+    if (tx.fromToken.symbol != "USDC" && tx.toToken.symbol != "USDC") return toast.error("Swap is not implemented yet for this pair");
+    
+    // TODO:  get correct price account for asset
+    const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo";
 
-    } catch (error) {
-      console.error("Error in setup:", error);
-    }
-  }
+   
+    if (tx.fromToken.symbol === "USDC") {
+      // buying the said asset
+      if (tx.toAmount == undefined) return toast.error("toAmount is not defined")
 
-  useEffect(() => {
-    setup();
-  }, [arenaId, program, wallet])
+      const pos = posMappedByAsset.get(tx.toToken.symbol)
 
-  // Compute balances from tradingAccount and openPositions
-  const balances = useMemo(() => {
-    // Seed demo balances for all known tokens (for UI testing)
-    const demo: Record<string, number> = {};
-    TOKENS.forEach(t => {
-      // Keep a stable pseudo-random per symbol across renders
-      const seed = Array.from(t.symbol).reduce((a, c) => a + c.charCodeAt(0), 0);
-      const pseudo = (Math.sin(seed) + 1) / 2; // 0..1
-      demo[t.symbol] = Number((pseudo * 250).toFixed(2));
-    });
+      if (pos == undefined) {
+        // Trigger two-step account creation flow
+        setOpenNewPosRequired(true);
+        setNewPosAsset(tx.toToken.symbol);
+        setNewPosAmount(tx.toAmount);
+        setStep1Done(false);
+        toast("You need to create an account before buying " + tx.toToken.symbol);
+        return;
+      } else {
+        await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, tx.toAmount)
+        queryClient.invalidateQueries([`pos-info-${pos.selfKey.toBase58()}`]);
+      }
 
-    // Overlay real balances if available
-    if (tradingAccount) {
-      demo['USDC'] = Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD;
-    }
-    if (openPositions && openPositions.length > 0) {
-      for (const pos of openPositions) {
-        const qty = Number(pos.quantityRaw) / QUANTITY_SCALING_FACTOR;
-        demo[pos.asset] = (demo[pos.asset] ?? 0) + qty;
+    } else {
+      // selling the said asset
+      if (tx.fromAmount == undefined) return toast.error("fromAmount is not defined")
+
+      const pos = posMappedByAsset.get(tx.fromToken.symbol)
+
+      if (pos == undefined) {
+        return toast.error("You don't own this asset. Shorting is not supported")
+      } else {
+        await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, -1 * tx.fromAmount)
+        queryClient.invalidateQueries([`pos-info-${pos.selfKey.toBase58()}`]);
       }
     }
-    return demo;
-  }, [tradingAccount, openPositions]);
 
-
-  const handleSwapTransaction = (tx: SwapTransaction) => {
-    console.log(tx);
+    queryClient.invalidateQueries([`account-info-${tradingAccount?.selfkey}`]);
+    queryClient.invalidateQueries(["openPosAddresses", arenaId]);
+    toast.success("Updated")
   };
+
+  
+  const handleUndelegateStep = async () => {
+    if (!programServiceER || !tradingAccount) return;
+    try {
+      setStep1InProgress(true);
+      await programServiceER.undelegateAccount(String(tradingAccount.selfkey));
+      setStep1Done(true);
+      toast.success("Trading account undelegated on rollup");
+    } catch {
+      toast.error("Failed to undelegate");
+    } finally {
+      setStep1InProgress(false);
+    }
+  };
+
+  // Step 2: Create new position for the asset and re-delegate on base (single signature)
+  const handleCreateAndDelegateStep = async () => {
+    if (!programService || !programServiceER || !wallet || !tradingAccount || !arenaId || !newPosAsset || !newPosAmount) return;
+    try {
+      setStep2InProgress(true);
+      
+      // TODO: get correct price account per asset
+      const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo";
+
+      // Compute new position PDA (seed is current count)
+      const seed = tradingAccount.openPositionsCount;
+      const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
+      const [ posPda ] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("open_position_account"),
+          wallet.publicKey.toBuffer(),
+          tradingAccount.selfkey.toBuffer(),
+          countLE,
+        ],
+        programService.program.programId,
+      );
+
+      const newPos : OpenPosAccAddress = { selfKey: posPda, seed };
+
+      // Build a single base-layer transaction with all instructions
+      const openPosTx = await programService.openPositionInArena(arenaId, newPosAsset, priceAccount, newPosAmount, true);
+      if (!openPosTx) return;
+      const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true);
+      if (!delegateTradeAccTx) return;
+      const delegateOpenPosTx = await programService.delegateOpenPosAccount(arenaId, newPos, true);
+      if (!delegateOpenPosTx) return;
+
+      const compositeTx = new Transaction();
+      compositeTx.add(
+        ...openPosTx.instructions,
+        ...delegateTradeAccTx.instructions,
+        ...delegateOpenPosTx.instructions,
+      );
+      compositeTx.feePayer = wallet.publicKey;
+      compositeTx.recentBlockhash = (await programService.connection.getLatestBlockhash()).blockhash;
+
+      const signedTx = await wallet.signTransaction(compositeTx);
+      const sig = await programService.connection.sendRawTransaction(signedTx.serialize());
+      await programService.connection.confirmTransaction(sig, "confirmed");
+
+      // Refresh data
+      queryClient.invalidateQueries([`account-info-${tradingAccount.selfkey.toBase58()}`]);
+      queryClient.invalidateQueries(["openPosAddresses", arenaId]);
+
+      toast.success("Account created and delegated. Purchase completed.");
+      setOpenNewPosRequired(false);
+      setNewPosAsset(null);
+      setNewPosAmount(0);
+    } catch {
+      toast.error("Failed to create/delegate account");
+    } finally {
+      setStep2InProgress(false);
+    }
+  };
+
+
+  if (isLoading) {
+    return (
+      <div>loading</div>
+    )
+  }
 
   return (
     <div className="flex relative items-start justify-center pt-20 px-8 gap-6">
@@ -104,22 +179,33 @@ const ManualTrade = () => {
       
       <div className="w-[35%]">
         <SwapComponent 
-          swapHandler={handleSwapTransaction}
-          balances={balances}
+          swapHandler={handleSwapTx}
+          // TODO: pass proper balances here
+          balances={{}}
+          openNewPosContext={openNewPosRequired ? {
+            required: true,
+            assetSymbol: newPosAsset ?? "",
+            step1: { onClick: handleUndelegateStep, done: step1Done, inProgress: step1InProgress },
+            step2: { onClick: handleCreateAndDelegateStep, inProgress: step2InProgress, disabled: !step1Done }
+          } : undefined}
         />
       </div>
-      
+
       {
         tradingAccount && (
           <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
-            <Holdings tradingAccount={tradingAccount} openPositions={openPositions}/>
-            <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/>
+            
+            <ManualDelegate /> 
+            
+            <Holdings tradingAccount={tradingAccount} openPositions={openPosAddresses} />
+            
+            {/* <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/> */}
           </div>
         )
       }
     </div>
-  )
+  ) 
 }
 
 
-export default ManualTrade;
+export default ManualTradeWrapper;
