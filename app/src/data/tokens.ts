@@ -89,4 +89,20 @@ export const TOKENS: Token[] = [
     image: "https://s2.coinmarketcap.com/static/img/coins/200x200/29304.png",
     decimals: 6,
   },
+  {
+    symbol: "SKR",
+    name: "Seeker",
+    address: "JKRyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+    price: 0.89,
+    image: "https://s2.coinmarketcap.com/static/img/coins/200x200/28600.png",
+    decimals: 6,
+  },
+  {
+    symbol: "HRV",
+    name: "Harshit RV",
+    address: "HRVyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+    price: 0.89,
+    image: "https://s2.coinmarketcap.com/static/img/coins/200x200/28600.png",
+    decimals: 6,
+  },
 ];

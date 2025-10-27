@@ -6,12 +6,20 @@ import { IoSwapVertical } from "react-icons/io5";
 import TokenSelector from "@/components/trade/TokenSelector";
 import type { SwapTransaction } from "@/types/types";
 
+interface OpenNewPosContext {
+  required: boolean;
+  assetSymbol: string;
+  step1: { onClick: () => void; done: boolean; inProgress: boolean };
+  step2: { onClick: () => void; disabled?: boolean; inProgress: boolean };
+}
+
 interface SwapComponentProps {
   balances: Record<string, number>;
   swapHandler: (tx: SwapTransaction) => void;
+  openNewPosContext?: OpenNewPosContext;
 }
 
-const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
+const SwapComponent = ({ balances, swapHandler, openNewPosContext }: SwapComponentProps) => {
   
   const [ swapTransaction, setSwapTransaction ] = useState<SwapTransaction>({
     fromToken: TOKENS[0],
@@ -155,20 +163,59 @@ const SwapComponent = ({ balances, swapHandler }: SwapComponentProps) => {
           
       {/* TODO: Add slippage input */}
 
-      <Button
-        onClick={() =>
-          swapHandler({
-            fromToken: swapTransaction.fromToken,
-            toToken: swapTransaction.toToken,
-            fromAmount: parseInputNumber(fromAmountInput),
-            toAmount: parseInputNumber(toAmountInput),
-            slippagePercent: swapTransaction.slippagePercent,
-          })
-        }
-        className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold"
-      >
-        Swap
-      </Button>
+      {openNewPosContext?.required ? (
+        <div className="w-full bg-primary-background rounded-3xl p-4 border border-[rgba(255,255,255,0.08)]">
+          <div className="text-sm text-gray-300 mb-3 leading-5">
+            First-time setup for {openNewPosContext.assetSymbol}. To hold {openNewPosContext.assetSymbol} in your account, we need to add a {openNewPosContext.assetSymbol} balance.
+          </div>
+
+          <div className="text-sm text-gray-300 mb-3 leading-5">
+            This takes two quick approvals and does not move your funds.
+          </div>
+          
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={() => openNewPosContext.step1.onClick()}
+              disabled={openNewPosContext.step1.done || openNewPosContext.step1.inProgress}
+              className="rounded-2xl h-11 bg-[#00C9C8] hover:bg-[#00C9C8]/70 disabled:cursor-not-allowed disabled:bg-[#2A2A2A] disabled:text-white disabled:border"
+            >
+              { openNewPosContext.step1.inProgress 
+                ? "Awaiting wallet approval…" : 
+                  openNewPosContext.step1.done 
+                    ? "Step 1 complete" 
+                    : "Step 1: Prepare your account"
+              }
+            </Button>
+
+            <Button
+              onClick={() => openNewPosContext.step2.onClick()}
+              disabled={openNewPosContext.step2.disabled || openNewPosContext.step2.inProgress}
+              className="rounded-2xl h-11 bg-[#00C9C8] hover:bg-[#00C9C8]/70 disabled:cursor-not-allowed disabled:bg-[#2A2A2A] disabled:text-white disabled:border"
+            >
+              { openNewPosContext.step2.inProgress 
+                ? "Creating and buying…" 
+                : `Step 2: Create ${openNewPosContext.assetSymbol} balance and buy ${openNewPosContext.assetSymbol}`
+              }
+            </Button>
+          </div>
+
+        </div>
+      ) : (
+        <Button
+          onClick={() =>
+            swapHandler({
+              fromToken: swapTransaction.fromToken,
+              toToken: swapTransaction.toToken,
+              fromAmount: parseInputNumber(fromAmountInput),
+              toAmount: parseInputNumber(toAmountInput),
+              slippagePercent: swapTransaction.slippagePercent,
+            })
+          }
+          className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold"
+        >
+          Swap
+        </Button>
+      )}
     </div>
   );
 };

@@ -7,8 +7,9 @@ import type { Transaction } from "@solana/web3.js";
 const ManualDelegate = () => {
   const { programServiceER, programService, wallet } = useProgramServices();
 
-  const { arenaId, delegationStatusByAccount, deadPosAccounts, tradingAccount, openPosAddresses } = useManualTradeData()
+  const { arenaId, delegationStatusByAccount, deadPosAccounts, tradingAccount, openPosAddresses, delegateTradingAcc } = useManualTradeData()
    
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const commitAll = async () => {
     // TODO: centralize all these null checks
     if (!programServiceER || !tradingAccount) return
@@ -104,13 +105,13 @@ const ManualDelegate = () => {
         
         <div className="flex gap-2 w-full">
           <Button onClick={() => delegateAll()} className="bg-primary-background text-white hover:bg-primary-background/60">
-            Delegate All
+            Del All
           </Button>
-          <Button onClick={() => commitAll()} className="bg-primary-background text-white hover:bg-primary-background/60">
-            Commit All
+          <Button onClick={() => delegateTradingAcc()} className="bg-primary-background text-white hover:bg-primary-background/60">
+            Del Trade
           </Button>
           <Button onClick={() => undelegateAll()} className="bg-primary-background text-white hover:bg-primary-background/60">
-            Undelegate all
+            Undel all
           </Button>
         </div>
       </div>

@@ -6,11 +6,11 @@ import Leaderboard from "@/components/main-tiles/Leaderboard";
 import ManualDelegate from "@/components/main-tiles/ManualDelegate";
 import { ManualTradeDataProvider } from "@/contexts/ManualTradeDataContext";
 import toast from "react-hot-toast";
+import { useState } from "react";
 import useProgramServices from "@/hooks/useProgramServices";
 import useManualTradeData from "@/hooks/useManualTradeData";
 import type { OpenPosAccAddress, SwapTransaction } from "@/types/types";
 import { useQueryClient } from "react-query";
-import { Button } from "@/components/ui/button";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey, Transaction } from "@solana/web3.js";
 
@@ -28,6 +28,14 @@ const ManualTrade = () => {
   const queryClient = useQueryClient();
 
   const { tradingAccount, openPosAddresses, isLoading, posMappedByAsset } = useManualTradeData();
+
+  // open new position flow
+  const [ openNewPosRequired, setOpenNewPosRequired ] = useState(false);
+  const [ newPosAsset, setNewPosAsset ] = useState<string | null>(null);
+  const [ newPosAmount, setNewPosAmount ] = useState<number>(0);
+  const [ step1Done, setStep1Done ] = useState(false);
+  const [ step1InProgress, setStep1InProgress ] = useState(false);
+  const [ step2InProgress, setStep2InProgress ] = useState(false);
 
   const handleSwapTx = async (tx: SwapTransaction) => {
     if (!arenaId || !programServiceER) return;
@@ -50,7 +58,13 @@ const ManualTrade = () => {
       const pos = posMappedByAsset.get(tx.toToken.symbol)
 
       if (pos == undefined) {
-        await service.openPositionInArena(arenaId, tx.toToken.symbol, priceAccount, tx.toAmount)
+        // Trigger two-step account creation flow
+        setOpenNewPosRequired(true);
+        setNewPosAsset(tx.toToken.symbol);
+        setNewPosAmount(tx.toAmount);
+        setStep1Done(false);
+        toast("You need to create an account before buying " + tx.toToken.symbol);
+        return;
       } else {
         await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, tx.toAmount)
         queryClient.invalidateQueries([`pos-info-${pos.selfKey.toBase58()}`]);
@@ -75,59 +89,80 @@ const ManualTrade = () => {
     toast.success("Updated")
   };
 
+  
+  const handleUndelegateStep = async () => {
+    if (!programServiceER || !tradingAccount) return;
+    try {
+      setStep1InProgress(true);
+      await programServiceER.undelegateAccount(String(tradingAccount.selfkey));
+      setStep1Done(true);
+      toast.success("Trading account undelegated on rollup");
+    } catch {
+      toast.error("Failed to undelegate");
+    } finally {
+      setStep1InProgress(false);
+    }
+  };
 
-  const openNewPositionFromDelegatedTradingAccount = async () => {
-    if (!programServiceER || !arenaId || !programService) return
+  // Step 2: Create new position for the asset and re-delegate on base (single signature)
+  const handleCreateAndDelegateStep = async () => {
+    if (!programService || !programServiceER || !wallet || !tradingAccount || !arenaId || !newPosAsset || !newPosAmount) return;
+    try {
+      setStep2InProgress(true);
+      
+      // TODO: get correct price account per asset
+      const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo";
 
-    await programServiceER.undelegateAccount(String(tradingAccount?.selfkey))
-    // if (!undelegateTradingAccountTx) return
+      // Compute new position PDA (seed is current count)
+      const seed = tradingAccount.openPositionsCount;
+      const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
+      const [ posPda ] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("open_position_account"),
+          wallet.publicKey.toBuffer(),
+          tradingAccount.selfkey.toBuffer(),
+          countLE,
+        ],
+        programService.program.programId,
+      );
 
-    // TODO: get correct price account for asset
-    const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"
+      const newPos : OpenPosAccAddress = { selfKey: posPda, seed };
 
-    if (!wallet || !tradingAccount) return;
+      // Build a single base-layer transaction with all instructions
+      const openPosTx = await programService.openPositionInArena(arenaId, newPosAsset, priceAccount, newPosAmount, true);
+      if (!openPosTx) return;
+      const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true);
+      if (!delegateTradeAccTx) return;
+      const delegateOpenPosTx = await programService.delegateOpenPosAccount(arenaId, newPos, true);
+      if (!delegateOpenPosTx) return;
 
-    // Compute the PDA for the soon-to-be-created open position (seed is current count)
-    const seed = tradingAccount.openPositionsCount;
-    const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
-    const [ posPda ] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("open_position_account"),
-        wallet.publicKey.toBuffer(),
-        tradingAccount.selfkey.toBuffer(),
-        countLE,
-      ],
-      programService.program.programId,
-    );
+      const compositeTx = new Transaction();
+      compositeTx.add(
+        ...openPosTx.instructions,
+        ...delegateTradeAccTx.instructions,
+        ...delegateOpenPosTx.instructions,
+      );
+      compositeTx.feePayer = wallet.publicKey;
+      compositeTx.recentBlockhash = (await programService.connection.getLatestBlockhash()).blockhash;
 
-    const newPos: OpenPosAccAddress = { selfKey: posPda, seed };
+      const signedTx = await wallet.signTransaction(compositeTx);
+      const sig = await programService.connection.sendRawTransaction(signedTx.serialize());
+      await programService.connection.confirmTransaction(sig, "confirmed");
 
-    // Request transactions (don't send yet), then merge their instructions
-    const openPosTx = await programService.openPositionInArena(arenaId, "SRM", priceAccount, 0.5, true)
-    if (!openPosTx) return;
+      // Refresh data
+      queryClient.invalidateQueries([`account-info-${tradingAccount.selfkey.toBase58()}`]);
+      queryClient.invalidateQueries(["openPosAddresses", arenaId]);
 
-    const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
-    if (!delegateTradeAccTx) return
-
-    const delegateOpenPosTx = await programService.delegateOpenPosAccount(arenaId, newPos, true)
-    if (!delegateOpenPosTx) return
-
-    const compositeTx = new Transaction();
-    compositeTx.add(
-      ...openPosTx.instructions,
-      ...delegateTradeAccTx.instructions,
-      ...delegateOpenPosTx.instructions,
-    );
-
-    compositeTx.feePayer = wallet.publicKey;
-    compositeTx.recentBlockhash = (await programService.connection.getLatestBlockhash()).blockhash;
-
-    const signedTx = await wallet.signTransaction(compositeTx);
-    const sig = await programService.connection.sendRawTransaction(signedTx.serialize());
-    await programService.connection.confirmTransaction(sig, "confirmed");
-
-    toast("done")
-  }
+      toast.success("Account created and delegated. Purchase completed.");
+      setOpenNewPosRequired(false);
+      setNewPosAsset(null);
+      setNewPosAmount(0);
+    } catch {
+      toast.error("Failed to create/delegate account");
+    } finally {
+      setStep2InProgress(false);
+    }
+  };
 
 
   if (isLoading) {
@@ -147,14 +182,18 @@ const ManualTrade = () => {
           swapHandler={handleSwapTx}
           // TODO: pass proper balances here
           balances={{}}
+          openNewPosContext={openNewPosRequired ? {
+            required: true,
+            assetSymbol: newPosAsset ?? "",
+            step1: { onClick: handleUndelegateStep, done: step1Done, inProgress: step1InProgress },
+            step2: { onClick: handleCreateAndDelegateStep, inProgress: step2InProgress, disabled: !step1Done }
+          } : undefined}
         />
       </div>
 
       {
         tradingAccount && (
           <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
-
-            <Button onClick={() => openNewPositionFromDelegatedTradingAccount()}>Open Brand new pos</Button>
             
             <ManualDelegate /> 
             
