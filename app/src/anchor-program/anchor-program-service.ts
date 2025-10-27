@@ -2,8 +2,8 @@ import { BN, type Program } from "@coral-xyz/anchor"
 import type { EphemeralRollups } from "./types"
 import type { AnchorWallet } from "@solana/wallet-adapter-react"
 import { Connection, Keypair, PublicKey } from "@solana/web3.js"
-import { QUANTITY_SCALING_FACTOR } from "@/constants";
-import type { ArenaAccount, OpenPosAccAddress, TradingAccountForArena, UserProfile } from "@/types/types";
+import { ADMIN_CONFIG_ACCOUNT_SEED, ARENA_ACCOUNT_SEED, QUANTITY_SCALING_FACTOR } from "@/constants";
+import type { AdminConfig, ArenaAccount, OpenPosAccAddress, TradingAccountForArena } from "@/types/types";
 
 class AnchorProgramService {
   program: Program<EphemeralRollups>
@@ -27,6 +27,76 @@ class AnchorProgramService {
     
     return isAccountDelegated;
   }
+
+
+  private fetchAdminConfigAccount = async () => {
+    try {
+      const [ pda ] = PublicKey.findProgramAddressSync(
+        [ Buffer.from(ADMIN_CONFIG_ACCOUNT_SEED) ], new PublicKey(this.program.programId),
+      );
+
+      const adminConfig = await this.program.account.adminConfig.fetch(pda);
+      
+      return adminConfig as AdminConfig;
+    } catch (error) {
+      console.error("Profile not found:", error);
+      return null;
+    }
+  };
+
+  fetchArenas = async () : Promise<ArenaAccount[] | null> => {
+    const adminConfig = await this.fetchAdminConfigAccount()
+
+    if (!adminConfig) return null;
+
+    try {
+      const arenas: ArenaAccount[] = [];
+      
+      for (let i = 0; i < adminConfig.nextArenaPdaSeed; i++) {
+        try {
+          const countLE = new BN(i).toArrayLike(Buffer, "le", 2);
+          
+          const [pda] = PublicKey.findProgramAddressSync(
+            [ Buffer.from(ARENA_ACCOUNT_SEED), countLE ],
+            new PublicKey(this.program.programId),
+          );
+
+          const arenaAccount = await this.program.account.arenaAccount.fetch(pda);
+          arenas.push({
+            ...arenaAccount,
+            selfkey: pda,
+          });
+        } catch (error) {
+          console.error(`Error fetching arena ${i}:`, error);
+        }
+      }
+      
+      return arenas;
+    } catch (error) {
+      console.error("Error fetching arenas:", error);
+      return null
+    }
+  };
+
+  createArena = async () => {
+    try {      
+
+      const transaction = await this.program.methods
+        .createArena()
+        .transaction();
+
+      transaction.feePayer = this.wallet.publicKey;
+      transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
+
+      console.log(`Position opened: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+    } catch (error) {
+      console.error("Error opening position:", error);
+    }
+  };
+
 
   fetchTradingAccountForArena = async (arenaPubkey: PublicKey) : Promise<TradingAccountForArena | null> => {
     try {
@@ -71,25 +141,6 @@ class AnchorProgramService {
   //     return null;
   //   }
   // };
-
-  // TODO: add try catch, refactor, check if this is correct
-  
-  createArena = async (): Promise<string> => {
-    // Create a new arena, mirroring logic from anchor_interactions
-    const transaction = await this.program.methods
-      .adminFnCreateArena()
-      .transaction();
-
-    transaction.feePayer = this.wallet.publicKey;
-    // Use the provider's connection attached to the Program instance
-    const connection = (this.program.provider as unknown as { connection: { getLatestBlockhash: () => Promise<{ blockhash: string }>; sendRawTransaction: (raw: Buffer | Uint8Array) => Promise<string> } }).connection;
-    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-
-    // Wallet provided by Anchor has signTransaction
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const signedTx = await (this.wallet as any).signTransaction(transaction);
-    return connection.sendRawTransaction(signedTx.serialize());
-  }
 
   // positions
   // fetchOpenPositionsForTradingAccount = async (tradingAccount: TradingAccountForArena): Promise<OpenPositionAccount[] | null> => {
@@ -233,65 +284,6 @@ class AnchorProgramService {
     }
   };
 
-
-  // needed by fetchUserArenas
-  private fetchUserProfile = async () => {
-    try {
-      const [ pda ] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("user_profile_account"), 
-          this.wallet.publicKey.toBuffer()
-        ],
-        new PublicKey(this.program.programId),
-      );
-
-      const profileAccount = await this.program.account.userProfile.fetch(pda);
-      
-      return profileAccount as UserProfile;
-    } catch (error) {
-      console.error("Profile not found:", error);
-      return null;
-    }
-  };
-
-  fetchUserArenas = async () : Promise<ArenaAccount[] | null> => {
-    const userProfile = await this.fetchUserProfile()
-
-    if (!userProfile) return null;
-    
-    try {
-      const arenas: ArenaAccount[] = [];
-      
-      // Fetch arenas based on arenas_created_count
-      for (let i = 0; i < userProfile.arenasCreatedCount; i++) {
-        try {
-          const countLE = new BN(i).toArrayLike(Buffer, "le", 1);
-          
-          const [pda] = PublicKey.findProgramAddressSync(
-            [
-              Buffer.from("arena_account"),
-              this.wallet.publicKey.toBuffer(),
-              countLE
-            ],
-            new PublicKey(this.program.programId),
-          );
-
-          const arenaAccount = await this.program.account.arenaAccount.fetch(pda);
-          arenas.push({
-            ...arenaAccount,
-            selfkey: pda,
-          });
-        } catch (error) {
-          console.error(`Error fetching arena ${i}:`, error);
-        }
-      }
-      
-      return arenas;
-    } catch (error) {
-      console.error("Error fetching user arenas:", error);
-      return null
-    }
-  };
 
   // EPHEMERAL ROLLUPS - delegate, commit, undelegate
   // TODO: add check: if isOnER is false, return early

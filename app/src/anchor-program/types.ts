@@ -14,170 +14,6 @@ export type EphemeralRollups = {
   },
   "instructions": [
     {
-      "name": "adminFnCreateArena",
-      "discriminator": [
-        186,
-        53,
-        47,
-        32,
-        27,
-        232,
-        72,
-        25
-      ],
-      "accounts": [
-        {
-          "name": "arenaAccount",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  97,
-                  114,
-                  101,
-                  110,
-                  97,
-                  95,
-                  97,
-                  99,
-                  99,
-                  111,
-                  117,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "signer"
-              },
-              {
-                "kind": "account",
-                "path": "signer_profile_account.arenas_created_count",
-                "account": "userProfile"
-              }
-            ]
-          }
-        },
-        {
-          "name": "signerProfileAccount",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  95,
-                  112,
-                  114,
-                  111,
-                  102,
-                  105,
-                  108,
-                  101,
-                  95,
-                  97,
-                  99,
-                  99,
-                  111,
-                  117,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "signer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "adminFnCreateProfile",
-      "discriminator": [
-        205,
-        137,
-        116,
-        10,
-        204,
-        83,
-        183,
-        209
-      ],
-      "accounts": [
-        {
-          "name": "profileAccount",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  95,
-                  112,
-                  114,
-                  111,
-                  102,
-                  105,
-                  108,
-                  101,
-                  95,
-                  97,
-                  99,
-                  99,
-                  111,
-                  117,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "signer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "name",
-          "type": "string"
-        }
-      ]
-    },
-    {
       "name": "closeAllPositions",
       "discriminator": [
         199,
@@ -408,6 +244,95 @@ export type EphemeralRollups = {
           "name": "magicContext",
           "writable": true,
           "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "createArena",
+      "discriminator": [
+        174,
+        236,
+        45,
+        61,
+        197,
+        215,
+        149,
+        169
+      ],
+      "accounts": [
+        {
+          "name": "arenaAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  114,
+                  101,
+                  110,
+                  97,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin_config_account.next_arena_pda_seed",
+                "account": "adminConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "adminConfigAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  100,
+                  109,
+                  105,
+                  110,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -877,6 +802,64 @@ export type EphemeralRollups = {
       "args": []
     },
     {
+      "name": "initializeAdminConfigAccount",
+      "discriminator": [
+        61,
+        132,
+        169,
+        252,
+        68,
+        196,
+        214,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "adminConfigAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  100,
+                  109,
+                  105,
+                  110,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "openPosition",
       "discriminator": [
         135,
@@ -1165,6 +1148,19 @@ export type EphemeralRollups = {
   ],
   "accounts": [
     {
+      "name": "adminConfig",
+      "discriminator": [
+        156,
+        10,
+        79,
+        161,
+        71,
+        9,
+        62,
+        77
+      ]
+    },
+    {
       "name": "arenaAccount",
       "discriminator": [
         83,
@@ -1215,19 +1211,6 @@ export type EphemeralRollups = {
         243,
         124
       ]
-    },
-    {
-      "name": "userProfile",
-      "discriminator": [
-        32,
-        37,
-        119,
-        205,
-        179,
-        180,
-        13,
-        194
-      ]
     }
   ],
   "errors": [
@@ -1263,6 +1246,26 @@ export type EphemeralRollups = {
     }
   ],
   "types": [
+    {
+      "name": "adminConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "adminPubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "nextArenaPdaSeed",
+            "type": "u16"
+          }
+        ]
+      }
+    },
     {
       "name": "arenaAccount",
       "type": {
@@ -1427,30 +1430,6 @@ export type EphemeralRollups = {
           {
             "name": "bump",
             "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "userProfile",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "pubkey",
-            "type": "pubkey"
-          },
-          {
-            "name": "arenasCreatedCount",
-            "type": "u8"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "name",
-            "type": "string"
           }
         ]
       }

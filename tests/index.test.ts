@@ -9,8 +9,6 @@ import { BN, Program } from "@coral-xyz/anchor";
 import { EphemeralRollups } from "../target/types/ephemeral_rollups";
 import * as idl from "../target/idl/ephemeral_rollups.json";
 import { fromWorkspace, LiteSVMProvider } from "anchor-litesvm";
-import { LiteSVM } from "litesvm";
-import path from "path";
 
 interface OpenPositionAccount {
   selfkey: anchor.web3.PublicKey;

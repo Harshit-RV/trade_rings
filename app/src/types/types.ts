@@ -38,12 +38,13 @@ export interface OpenPositionAccount {
   bump: number;
   seed: number;
 }
-export interface UserProfile {
-  pubkey: PublicKey;
-  arenasCreatedCount: number;
-  bump: number;
-  name: string;
+
+export interface AdminConfig {
+  adminPubkey: PublicKey,
+  bump: number,
+  nextArenaPdaSeed: number,
 }
+
 export interface ArenaAccount {
   selfkey: PublicKey;
   creator: PublicKey;
