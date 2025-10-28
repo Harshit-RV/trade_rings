@@ -13,6 +13,7 @@ import type { OpenPosAccAddress, SwapTransaction } from "@/types/types";
 import { useQueryClient } from "react-query";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey, Transaction } from "@solana/web3.js";
+import TestComponent from "@/components/main-tiles/TestComponent";
 
 const ManualTradeWrapper = () => {
   return (
@@ -197,6 +198,9 @@ const ManualTrade = () => {
            height={300}
          />
          <BotTrading/> */}
+          <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
+         <TestComponent/>
+         </div>
       {
         tradingAccount && (
           <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
