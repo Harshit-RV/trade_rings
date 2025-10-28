@@ -1,0 +1,56 @@
+import type { BN } from "@coral-xyz/anchor";
+import type { PublicKey } from "@solana/web3.js";
+
+export interface Token {
+  symbol: string;
+  name: string;
+  address: string;
+  price: number;
+  image: string;
+  decimals: number;
+}
+
+export interface SwapTransaction {
+  fromToken: Token;
+  toToken: Token;
+  fromAmount: number | undefined;
+  toAmount: number | undefined;
+  slippagePercent: number;
+}
+
+export interface DelegationStatus {
+  isDelegated: boolean
+}
+
+
+export interface TradingAccountForArena {
+  selfkey: PublicKey;
+  authority: PublicKey;
+  openPositionsCount: number;
+  microUsdcBalance: BN;
+  bump: number;
+}
+
+export interface OpenPositionAccount {
+  selfkey: PublicKey;
+  asset: string;
+  quantityRaw: BN; // Fixed-point representation: quantity * 10^6
+  bump: number;
+  seed: number;
+}
+export interface UserProfile {
+  pubkey: PublicKey;
+  arenasCreatedCount: number;
+  bump: number;
+  name: string;
+}
+export interface ArenaAccount {
+  selfkey: PublicKey;
+  creator: PublicKey;
+  bump: number;
+}
+
+export interface OpenPosAccAddress {
+  selfKey: PublicKey,
+  seed: number
+}

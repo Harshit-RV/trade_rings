@@ -1,133 +1,175 @@
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
-import { AnchorProvider, BN, Program, setProvider } from "@coral-xyz/anchor";
-import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
-import type { EphemeralRollups } from "@/anchor-program/types";
-import idl from "@/anchor-program/idl.json";
-import { MICRO_USD_PER_USD, QUANTITY_SCALING_FACTOR } from "@/constants";
-import type { TradingAccountForArena, OpenPositionAccount } from "@/anchor-program/anchor-program-service";
-import AnchorProgramService from "@/anchor-program/anchor-program-service";
-import TokenSelector from "@/components/TokenSelector";
-import type { Token } from "@/types/token";
-import { TOKENS } from "@/data/tokens";
-import HoldingsChart from "@/components/HoldingsChart";
+import SwapComponent from "@/components/trade/SwapComponent";
+import Holdings from "@/components/holdings/Holdings";
+import Leaderboard from "@/components/main-tiles/Leaderboard";
+// import type { SwapTransaction } from "@/types/types";
+import ManualDelegate from "@/components/main-tiles/ManualDelegate";
+import { ManualTradeDataProvider } from "@/contexts/ManualTradeDataContext";
+import toast from "react-hot-toast";
+import { useState } from "react";
+import useProgramServices from "@/hooks/useProgramServices";
+import useManualTradeData from "@/hooks/useManualTradeData";
+import type { OpenPosAccAddress, SwapTransaction } from "@/types/types";
+import { useQueryClient } from "react-query";
+import { BN } from "@coral-xyz/anchor";
+import { PublicKey, Transaction } from "@solana/web3.js";
 
+const ManualTradeWrapper = () => {
+  return (
+    <ManualTradeDataProvider>
+      <ManualTrade/>
+    </ManualTradeDataProvider>
+  )
+}
 
-import TradingViewWidget from "@/components/PriceHistoryChart";
-import BotTrading from "@/components/BotTrading";
 const ManualTrade = () => {
   const { arenaId } = useParams();
-  const { connection } = useConnection();
-  const wallet = useAnchorWallet();
+  const { programServiceER, programService, wallet } = useProgramServices();
+  const queryClient = useQueryClient();
 
-  const [ tradingAccount, setTradingAccount ] = useState<TradingAccountForArena | null>(null);
-  const [ openPositions, setOpenPositions ] = useState<OpenPositionAccount[]>([]);
-  
-  // Token selector state
-  const [ isTokenSelectorOpen, setIsTokenSelectorOpen ] = useState(false);
-  const [ selectedTokenType, setSelectedTokenType ] = useState<'from' | 'to' | null>(null);
-  const [ fromToken, setFromToken ] = useState<Token>(TOKENS[0]); // Default to USDC
-  const [ toToken, setToToken ] = useState<Token>(TOKENS[1]); // Default to SOL
-  const [ fromAmount, setFromAmount ] = useState<string>("");
-  const [ toAmount, setToAmount ] = useState<string>("");
-  
-  const provider = useMemo(() => {
-    if (!wallet) return null;
-    return new AnchorProvider(connection, wallet, { commitment: "processed" });
-  }, [connection, wallet]);
+  const { tradingAccount, openPosAddresses, isLoading, posMappedByAsset } = useManualTradeData();
 
-  const program = useMemo(() => {
-    if (!provider) return null;
-    setProvider(provider);
-    return new Program<EphemeralRollups>(idl as EphemeralRollups, provider);
-  }, [provider]);
+  // open new position flow
+  const [ openNewPosRequired, setOpenNewPosRequired ] = useState(false);
+  const [ newPosAsset, setNewPosAsset ] = useState<string | null>(null);
+  const [ newPosAmount, setNewPosAmount ] = useState<number>(0);
+  const [ step1Done, setStep1Done ] = useState(false);
+  const [ step1InProgress, setStep1InProgress ] = useState(false);
+  const [ step2InProgress, setStep2InProgress ] = useState(false);
 
-  const anchorProgramService = useMemo(() => {
-    if (!program || !wallet) return null;
-    return new AnchorProgramService(program, wallet, idl.address);
-  }, [program, wallet]);
+  const handleSwapTx = async (tx: SwapTransaction) => {
+    if (!arenaId || !programServiceER) return;
 
-  const setup = async () => {
-    if (!arenaId || !anchorProgramService) {
-      console.log("Missing required data:", { arenaId, hasProgram: !!program, hasWallet: !!wallet });
-      return;
-    }
+    const service = programServiceER;
 
-    try {
-      const arenaPubkey = new PublicKey(arenaId);
-      const tradeAccount = await anchorProgramService.fetchTradingAccountForArena(arenaPubkey);
+    if (tx.fromToken.symbol === tx.toToken.symbol) return toast.error("Select two different tokens");
 
-      if (!tradeAccount) return
-      
-      setTradingAccount(tradeAccount);
-      
-      const positions = await anchorProgramService.fetchOpenPositionsForTradingAccount(tradeAccount);
-      if (positions) setOpenPositions(positions);
+    // Only USDC pairs supported for now
+    if (tx.fromToken.symbol != "USDC" && tx.toToken.symbol != "USDC") return toast.error("Swap is not implemented yet for this pair");
+    
+    // TODO:  get correct price account for asset
+    const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo";
 
-    } catch (error) {
-      console.error("Error in setup:", error);
-    }
-  }
+   
+    if (tx.fromToken.symbol === "USDC") {
+      // buying the said asset
+      if (tx.toAmount == undefined) return toast.error("toAmount is not defined")
 
-  useEffect(() => {
-    setup();
-  }, [arenaId, program, wallet])
+      const pos = posMappedByAsset.get(tx.toToken.symbol)
 
-  // Compute balances from tradingAccount and openPositions
-  const balances = useMemo(() => {
-    // Seed demo balances for all known tokens (for UI testing)
-    const demo: Record<string, number> = {};
-    TOKENS.forEach(t => {
-      // Keep a stable pseudo-random per symbol across renders
-      const seed = Array.from(t.symbol).reduce((a, c) => a + c.charCodeAt(0), 0);
-      const pseudo = (Math.sin(seed) + 1) / 2; // 0..1
-      demo[t.symbol] = Number((pseudo * 250).toFixed(2));
-    });
+      if (pos == undefined) {
+        // Trigger two-step account creation flow
+        setOpenNewPosRequired(true);
+        setNewPosAsset(tx.toToken.symbol);
+        setNewPosAmount(tx.toAmount);
+        setStep1Done(false);
+        toast("You need to create an account before buying " + tx.toToken.symbol);
+        return;
+      } else {
+        await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, tx.toAmount)
+        queryClient.invalidateQueries([`pos-info-${pos.selfKey.toBase58()}`]);
+      }
 
-    // Overlay real balances if available
-    if (tradingAccount) {
-      demo['USDC'] = Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD;
-    }
-    if (openPositions && openPositions.length > 0) {
-      for (const pos of openPositions) {
-        const qty = Number(pos.quantityRaw) / QUANTITY_SCALING_FACTOR;
-        demo[pos.asset] = (demo[pos.asset] ?? 0) + qty;
+    } else {
+      // selling the said asset
+      if (tx.fromAmount == undefined) return toast.error("fromAmount is not defined")
+
+      const pos = posMappedByAsset.get(tx.fromToken.symbol)
+
+      if (pos == undefined) {
+        return toast.error("You don't own this asset. Shorting is not supported")
+      } else {
+        await service.updatePositionQuantity(arenaId, pos.selfKey.toBase58(), priceAccount, -1 * tx.fromAmount)
+        queryClient.invalidateQueries([`pos-info-${pos.selfKey.toBase58()}`]);
       }
     }
-    return demo;
-  }, [tradingAccount, openPositions]);
 
-  // Token selection handlers
-  const handleTokenClick = (type: 'from' | 'to') => {
-    setSelectedTokenType(type);
-    setIsTokenSelectorOpen(true);
+    queryClient.invalidateQueries([`account-info-${tradingAccount?.selfkey}`]);
+    queryClient.invalidateQueries(["openPosAddresses", arenaId]);
+    toast.success("Updated")
   };
 
-  const handleTokenSelect = (token: Token) => {
-    if (selectedTokenType === 'from') {
-      setFromToken(token);
-    } else if (selectedTokenType === 'to') {
-      setToToken(token);
+  
+  const handleUndelegateStep = async () => {
+    if (!programServiceER || !tradingAccount) return;
+    try {
+      setStep1InProgress(true);
+      await programServiceER.undelegateAccount(String(tradingAccount.selfkey));
+      setStep1Done(true);
+      toast.success("Trading account undelegated on rollup");
+    } catch {
+      toast.error("Failed to undelegate");
+    } finally {
+      setStep1InProgress(false);
     }
-    setIsTokenSelectorOpen(false);
-    setSelectedTokenType(null);
   };
 
-  const handleCloseTokenSelector = () => {
-    setIsTokenSelectorOpen(false);
-    setSelectedTokenType(null);
+  // Step 2: Create new position for the asset and re-delegate on base (single signature)
+  const handleCreateAndDelegateStep = async () => {
+    if (!programService || !programServiceER || !wallet || !tradingAccount || !arenaId || !newPosAsset || !newPosAmount) return;
+    try {
+      setStep2InProgress(true);
+      
+      // TODO: get correct price account per asset
+      const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo";
+
+      // Compute new position PDA (seed is current count)
+      const seed = tradingAccount.openPositionsCount;
+      const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
+      const [ posPda ] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("open_position_account"),
+          wallet.publicKey.toBuffer(),
+          tradingAccount.selfkey.toBuffer(),
+          countLE,
+        ],
+        programService.program.programId,
+      );
+
+      const newPos : OpenPosAccAddress = { selfKey: posPda, seed };
+
+      // Build a single base-layer transaction with all instructions
+      const openPosTx = await programService.openPositionInArena(arenaId, newPosAsset, priceAccount, newPosAmount, true);
+      if (!openPosTx) return;
+      const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true);
+      if (!delegateTradeAccTx) return;
+      const delegateOpenPosTx = await programService.delegateOpenPosAccount(arenaId, newPos, true);
+      if (!delegateOpenPosTx) return;
+
+      const compositeTx = new Transaction();
+      compositeTx.add(
+        ...openPosTx.instructions,
+        ...delegateTradeAccTx.instructions,
+        ...delegateOpenPosTx.instructions,
+      );
+      compositeTx.feePayer = wallet.publicKey;
+      compositeTx.recentBlockhash = (await programService.connection.getLatestBlockhash()).blockhash;
+
+      const signedTx = await wallet.signTransaction(compositeTx);
+      const sig = await programService.connection.sendRawTransaction(signedTx.serialize());
+      await programService.connection.confirmTransaction(sig, "confirmed");
+
+      // Refresh data
+      queryClient.invalidateQueries([`account-info-${tradingAccount.selfkey.toBase58()}`]);
+      queryClient.invalidateQueries(["openPosAddresses", arenaId]);
+
+      toast.success("Account created and delegated. Purchase completed.");
+      setOpenNewPosRequired(false);
+      setNewPosAsset(null);
+      setNewPosAmount(0);
+    } catch {
+      toast.error("Failed to create/delegate account");
+    } finally {
+      setStep2InProgress(false);
+    }
   };
 
-  const handleSwapTokens = () => {
-    setFromToken(toToken);
-    setToToken(fromToken);
-    // swap amounts as well
-    setFromAmount(toAmount);
-    setToAmount(fromAmount);
-  };
+
+  if (isLoading) {
+    return (
+      <div>loading</div>
+    )
+  }
 
   return (
     <div className="flex relative items-start justify-center pt-20 px-8 gap-6">
@@ -137,275 +179,38 @@ const ManualTrade = () => {
       
       <div className="w-[35%]">
         <SwapComponent 
-          fromToken={fromToken}
-          toToken={toToken}
-          onTokenClick={handleTokenClick}
-          onSwapTokens={handleSwapTokens}
-          balances={balances}
-          fromAmount={fromAmount}
-          toAmount={toAmount}
-          onFromChange={(v) => {
-            const max = balances[fromToken.symbol] ?? 0;
-            if (v === "") { setFromAmount(""); return; }
-            const num = Number(v);
-            if (Number.isNaN(num)) return;
-            const clamped = Math.min(Math.max(0, num), max);
-            setFromAmount(clamped.toString());
-          }}
-          onToChange={(v) => {
-            if (v === "") { setToAmount(""); return; }
-            const num = Number(v);
-            if (Number.isNaN(num)) return;
-            const clamped = Math.max(0, num);
-            setToAmount(clamped.toString());
-          }}
+          swapHandler={handleSwapTx}
+          // TODO: pass proper balances here
+          balances={{}}
+          openNewPosContext={openNewPosRequired ? {
+            required: true,
+            assetSymbol: newPosAsset ?? "",
+            step1: { onClick: handleUndelegateStep, done: step1Done, inProgress: step1InProgress },
+            step2: { onClick: handleCreateAndDelegateStep, inProgress: step2InProgress, disabled: !step1Done }
+          } : undefined}
         />
-         
-        <div className="flex gap-4 pt-4">
-          <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
-          <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
-        </div>
-         <TradingViewWidget 
+      </div>
+
+         {/* <TradingViewWidget 
            fromToken={fromToken.symbol} 
            toToken={toToken.symbol} 
            height={300}
          />
-         <BotTrading/>
-      </div>
-      
+         <BotTrading/> */}
       {
-          <div className="absolute top-3 right-3  w-[25%]">
-            {/* <Holdings tradingAccount={tradingAccount?? null} openPositions={openPositions}/> */}
-            <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/>
-          </div>
+        tradingAccount && (
+          <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
+            
+            <ManualDelegate /> 
+            
+            <Holdings tradingAccount={tradingAccount} openPositions={openPosAddresses} />
+            
+            {/* <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/> */}
+          </div>)
       }
-      
-      {/* Token Selector Modal - balances only for selling (from) side */}
-      <TokenSelector
-        isOpen={isTokenSelectorOpen}
-        onClose={handleCloseTokenSelector}
-        onSelectToken={handleTokenSelect}
-        currentToken={selectedTokenType === 'from' ? fromToken : toToken}
-        tokens={TOKENS}
-        balances={selectedTokenType === 'from' ? balances : undefined}
-      />
     </div>
-  )
+  ) 
 }
 
-const Leaderboard = () => {
-  const leaderboardData = Array.from({ length: 10 }, () => ({
-    person: "Harshit.ror",
-    balance: "$500"
-  }));
 
-  return (
-    <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      <h2 className="text-md font-bold mb-4">Leaderboard</h2>
-      <div className="text-4xl font-bold mb-6">#1</div>
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm font-medium text-gray-400 mb-3">
-          <span>Person</span>
-          <span>Balance</span>
-        </div>
-        {leaderboardData.map((item, index) => (
-          <div key={index} className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <img className="size-4" src="https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png" alt="USDC" />
-              <span className="text-sm">{item.person}</span>
-            </div>
-            <span className="text-sm font-medium">{item.balance}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const Holdings = ( { tradingAccount, openPositions } : { tradingAccount: TradingAccountForArena, openPositions: OpenPositionAccount[] } ) => {
-  const getAssetIcon = (asset: string) => {
-    switch (asset.toLowerCase()) {
-      case 'usdc':
-        return "https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png";
-      case 'sol':
-        return "https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png";
-      default:
-        return "https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png";
-    }
-  };
-
-  const formatQuantity = (quantityRaw: BN) => {
-    const quantity = Number(quantityRaw) / QUANTITY_SCALING_FACTOR;
-    return quantity.toFixed(2);
-  };
-
-  return (
-    <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      <h2 className="text-md font-bold mb-4">Your Holdings</h2>
-      <div className="text-2xl font-bold mb-6 bg-[#1F1F1F] p-2 rounded-lg">
-        $ {(Number(tradingAccount.microUsdcBalance) / MICRO_USD_PER_USD).toLocaleString('en-US')}
-      </div>
-      <div className="space-y-2">
-        
-        <div className="flex justify-between text-sm font-medium text-gray-400 mb-3">
-          <span>Asset</span>
-          <span>Quantity</span>
-          <span>Value</span>
-        </div>
-        
-        {openPositions.length > 0 ? (
-          openPositions.map((position, index) => (
-            <div key={index} className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <img className="size-4" src={getAssetIcon(position.asset)} alt={position.asset} />
-                <span className="text-sm">{position.asset}</span>
-              </div>
-              <span className="text-sm">{formatQuantity(position.quantityRaw)}</span>
-              <span className="text-sm font-medium">TODO</span>
-            </div>
-          ))
-        ) : (
-          <div className="text-center text-gray-400 py-4">
-            <p className="text-sm">No open positions</p>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
-};
-
-interface SwapComponentProps {
-  fromToken: Token;
-  toToken: Token;
-  onTokenClick: (type: 'from' | 'to') => void;
-  onSwapTokens: () => void;
-  balances: Record<string, number>;
-  fromAmount: string;
-  toAmount: string;
-  onFromChange: (v: string) => void;
-  onToChange: (v: string) => void;
-}
-
-const SwapComponent = ({ fromToken, toToken, onTokenClick, onSwapTokens, balances, fromAmount, toAmount, onFromChange, onToChange }: SwapComponentProps) => {
-  const [ sliderValue, setSliderValue ] = useState<number>(5);
-  return (
-    <div className="flex-shrink-0 bg-[#000000]/50 h-min py-7 px-4 rounded-4xl gap-5 flex flex-col border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
-      <Tabs defaultValue="buy" className="w-full">
-        <TabsList className="w-full h-10">
-          <TabsTrigger 
-            className="w-1/2 border-none font-bold hover:cursor-pointer dark:data-[state=active]:bg-[#222D2E] dark:data-[state=active]:text-[#02C178] h-[calc(100%+1px)]" 
-            value="buy"
-          >
-            Buy
-          </TabsTrigger>
-          <TabsTrigger 
-            className="w-1/2 border-none font-bold hover:cursor-pointer dark:data-[state=active]:bg-[#39252A] dark:data-[state=active]:text-[#FA4B4E] h-[calc(100%+1px)]"
-            value="sell"
-          >
-            Sell
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="bg-[#1F1F1F] py-4 px-8 rounded-2xl flex items-center">
-        <button
-          onClick={() => onTokenClick('to')}
-          className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
-        >
-          <img className="size-5" src={toToken.image} alt={toToken.symbol} />
-          <p className="text-sm font-bold">{toToken.symbol}</p>
-        </button>
-        
-        <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
-          <input
-            placeholder="0.0"
-            inputMode="decimal"
-            pattern="[0-9]*[.,]?[0-9]*"
-            value={toAmount}
-            onChange={(e) => onToChange(e.target.value.replace(/,/g, '.'))}
-            className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
-          />
-          {/* Receiving side does not show max */}
-        </div>
-      </div>
-      {/* Swap Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={onSwapTokens}
-          className="bg-[#2A2A2A] hover:bg-[#3A3A3A] p-2 rounded-full transition-colors"
-        >
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-          </svg>
-        </button>
-      </div>
-
-
-
-      <div className="bg-[#1F1F1F] py-3 px-8 rounded-2xl flex items-center">
-        <button
-          onClick={() => onTokenClick('from')}
-          className="bg-black rounded-xl py-2 px-3 flex items-center gap-2 flex-shrink-0 hover:bg-[#1A1A1A] transition-colors"
-        >
-          <img className="size-5" src={fromToken.image} alt={fromToken.symbol} />
-          <p className="text-sm font-bold">{fromToken.symbol}</p>
-        </button>
-        
-        <div className="flex-col flex justify-end items-end px-2 py-1 rounded-sm w-full">
-          <input
-            placeholder="0.0"
-            inputMode="decimal"
-            pattern="[0-9]*[.,]?[0-9]*"
-            value={fromAmount}
-            onChange={(e) => onFromChange(e.target.value.replace(/,/g, '.'))}
-            className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
-          />
-          {/* Max balance hint */}
-          <div className="text-xs text-gray-400 pt-1 w-full text-right">Max: {(balances[fromToken.symbol] ?? 0).toLocaleString()}</div>
-
-          
-        </div>
-        
-      </div>
-
-      {/* Quick percent buttons */}
-      <div className="flex pt-2 w-full justify-center gap-7">
-            {[10,25,50,100].map(p => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  const max = balances[fromToken.symbol] ?? 0;
-                  const val = ((p/100) * max);
-                  onFromChange(val.toFixed(6));
-                }}
-                className="text-sm px-5 py-2 rounded-lg bg-[#2A2A2A] hover:bg-[#3A3A3A]"
-              >
-                {p}%
-              </button>
-            ))}
-          </div>
-          <div className="px-4 py-5">
-
-            <div>Slippage: {sliderValue} %</div>
-            <input
-            type="range"
-            min={0}
-            max={15}
-            step={0.25}
-            value={sliderValue}
-            onChange={(e) => setSliderValue(Number(e.target.value))}
-            className="w-full h-3 appearance-none bg-transparent"
-            aria-label="slider"
-            />
-      
-          </div>
-
-      <Button className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold">Swap</Button>
-    </div>
-  );
-};
-
-
-export default ManualTrade;
+export default ManualTradeWrapper;

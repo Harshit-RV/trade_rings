@@ -1,45 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
-import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
-import type { EphemeralRollups } from "@/anchor-program/types";
-import idl from "@/anchor-program/idl.json";
-//import AnchorProgramService, { type ArenaAccount } from "@/anchor-program/anchor-program-service";
-import AnchorProgramService from "@/anchor-program/anchor-program-service";
-
-import { ArenaCardsList } from "@/components/arenaCardList";
+import { useEffect, useState } from "react";
+import { ArenaCard } from "../components/ArenaCard";
+import useProgramServices from "@/hooks/useProgramServices";
 
 
 const ArenaList = () => {
-  const { connection } = useConnection();
-  const wallet = useAnchorWallet();
+  const { programService } = useProgramServices()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ arenas, setArenas ] = useState<any[]>([])
 
-  const provider = useMemo(() => {
-    if (!wallet) return null;
-    return new AnchorProvider(connection, wallet, { commitment: "processed" });
-  }, [connection, wallet]);
-
-  const program = useMemo(() => {
-    if (!provider) return null;
-    setProvider(provider);
-    return new Program<EphemeralRollups>(idl as EphemeralRollups, provider);
-  }, [provider]);
-
-  const anchorProgramService = useMemo(() => {
-    if (!program || !wallet) return null;
-    return new AnchorProgramService(program, wallet, idl.address);
-  }, [program, wallet]);
-
   const setup = async () => {
-    if (!anchorProgramService) {
-      console.log("Missing required data:", { hasProgram: !!program, hasWallet: !!wallet });
+    if (!programService) {
+      console.log("Missing required data:", { hasProgram: !!programService});
       return;
     }
 
     try {
-      const arenaList = await anchorProgramService.fetchUserArenas();
+      const arenaList = await programService.fetchUserArenas();
 
       if (!arenaList) return
       const arenaListTemp=arenaList!.map((arena,index)=>{return  {name:`Arena ${index+1}`,
@@ -57,37 +34,32 @@ const ArenaList = () => {
 
   useEffect(() => {
     setup();
-  }, [anchorProgramService])
+  }, [programService])
  
    
-    
   return (
     <div className="flex flex-col items-center justify-center py-10 px-8 gap-4">
-      <div className="flex justify-between w-full mb-0 items-end px-3 translate-y-2">
-          <span>Arenas</span>
-          <button 
-            className="py-1 px-6 rounded cursor-pointer dark-glass" 
-            onClick={async () => {
-              try {
-                if (!anchorProgramService) {
-                  console.error("Missing required data for creating arena");
-                  return;
-                }
-                const txSig = await anchorProgramService.createArena();
-                console.log("Arena created:", txSig);
-                // Refresh the arena list
-                setup();
-              } catch (error) {
-                console.error("Error creating arena:", error);
-              }
-            }}
-          >
-            New +
-          </button>
+      <div className="flex w-full pl-1">
+          <span className="text-xl font-bold">Arenas</span>
       </div>
-      <span className="mt-0 bg-white h-[1px] w-full"></span>
 
-      {arenas&&<ArenaCardsList cards={arenas}/>}
+      {
+        arenas && arenas.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {arenas.map((card, idx) => (
+              <ArenaCard 
+                key={idx} 
+                name={card.name} 
+                author={card.author} 
+                timeline={card.timeline} 
+                link={card.link} 
+                people={card.people} 
+                status={card.status} 
+              />
+            ))}
+          </div>
+        )
+      }
 
       {
         arenas.length == 0 && (
