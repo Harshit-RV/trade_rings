@@ -160,7 +160,7 @@ const ManualTrade = () => {
             setToAmount(clamped.toString());
           }}
         />
-         {/* 
+         
         <div className="flex gap-4 pt-4">
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
           <div className="bg-[#1F1F1F] h-16 w-full rounded-4xl"></div>
@@ -170,16 +170,14 @@ const ManualTrade = () => {
            toToken={toToken.symbol} 
            height={300}
          />
-         <BotTrading/> */}
+         <BotTrading/>
       </div>
       
       {
-        tradingAccount && (
           <div className="absolute top-3 right-3  w-[25%]">
-            <Holdings tradingAccount={tradingAccount?? null} openPositions={openPositions}/>
+            {/* <Holdings tradingAccount={tradingAccount?? null} openPositions={openPositions}/> */}
             <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/>
           </div>
-        )
       }
       
       {/* Token Selector Modal - balances only for selling (from) side */}
