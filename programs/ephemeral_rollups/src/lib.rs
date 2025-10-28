@@ -49,26 +49,40 @@ pub mod ephemeral_rollups {
         Ok(())
     }
 
-    pub fn create_arena(ctx: Context<CreateArena>) -> Result<()> {
+    pub fn create_arena(ctx: Context<CreateArena>, entry_fee_in_lamports: u64, name: String, starts_at: i64, expires_at: i64) -> Result<()> {
         let admin_config = &mut ctx.accounts.admin_config_account;
         let arena_account = &mut ctx.accounts.arena_account;
+
+        let clock = Clock::get()?;
+
+        require!(name.len() <= 30, EphemeralRollupError::NameTooLong);
+        require!(expires_at > clock.unix_timestamp, EphemeralRollupError::ExpiryTimeInThePast);
+        require!(starts_at > clock.unix_timestamp, EphemeralRollupError::StartTimeInThePast);
+        // require!(entry_fee_in_lamports > 0, EphemeralRollupError::EntryFeeTooLow);
 
         require_keys_eq!(ctx.accounts.signer.key(), admin_config.admin_pubkey, EphemeralRollupError::Unauthorised);
 
         arena_account.bump = ctx.bumps.arena_account;
         arena_account.creator = *ctx.accounts.signer.key;
-        
+        arena_account.arena_name = name;
+        arena_account.total_traders = 0;
+        arena_account.starts_at = starts_at;
+        arena_account.expires_at = expires_at;
+        arena_account.entry_fee_in_lamports = entry_fee_in_lamports;
+
         admin_config.next_arena_pda_seed += 1;
         Ok(())
     }
 
-    // public functions
     pub fn create_trading_account_for_arena(ctx: Context<CreateTradingAccountForArena>) -> Result<()> {
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
+        let arena_account = &mut ctx.accounts.arena_account;
 
         trading_account.bump = ctx.bumps.trading_account_for_arena;
         trading_account.authority = *ctx.accounts.signer.key;
         trading_account.open_positions_count = 0;
+
+        arena_account.total_traders += 1;
 
         // TODO: figure out what the starting balance should be
         trading_account.micro_usdc_balance = 1_000_000_000_000; // 1 million USDC
@@ -246,8 +260,14 @@ pub struct InitAdminConfigAccount<'info> {
 #[account]
 #[derive(InitSpace)]
 pub struct ArenaAccount {
+    #[max_len(30)]
+    arena_name: String,
     creator: Pubkey,
     bump: u8,
+    total_traders: u16,
+    starts_at: i64,
+    expires_at: i64,
+    entry_fee_in_lamports: u64,
 }
 
 #[derive(Accounts)]
@@ -300,6 +320,7 @@ pub struct CreateTradingAccountForArena<'info> {
     )]
     pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
 
+    #[account(mut)]
     pub arena_account: Account<'info, ArenaAccount>,
 
     #[account(mut)]
