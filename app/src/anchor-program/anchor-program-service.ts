@@ -159,8 +159,9 @@ class AnchorProgramService {
         ...tradingAccount,
         selfkey: tradingPda,
       };
-    } catch (error) {
-      console.error("Trading account not found:", error);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_) {
+      // console.error("Trading account not found:", error);
       return null;
     }
   };
@@ -294,7 +295,9 @@ class AnchorProgramService {
       if (this.isOnEphemeralRollup) {
         const tempKeypair = Keypair.fromSeed(this.wallet.publicKey.toBytes());
 
-        const { blockhash } = await this.connection.getLatestBlockhash("confirmed");
+        // const { blockhash } = await this.connection.getLatestBlockhash("confirmed");
+        const { value: { blockhash, lastValidBlockHeight } } = await this.connection.getLatestBlockhashAndContext();
+
 
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = tempKeypair.publicKey;
@@ -304,13 +307,18 @@ class AnchorProgramService {
         const signedTx = await this.wallet.signTransaction(transaction)
 
         const raw = signedTx.serialize();
+
+        try {
+          const signature = await this.connection.sendRawTransaction(raw);
+  
+          await this.connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, "processed");
+  
+          console.log(`Position updated: https://solana.fm/tx/${signature}?cluster=devnet-alpha`);
+  
+        } catch (error) {
+          console.log("magicblock sending transaction: ", error)
+        }
         
-        const signature = await this.connection.sendRawTransaction(raw, {
-          skipPreflight: true,
-        });
-
-        console.log(`Position updated: https://solana.fm/tx/${signature}?cluster=devnet-alpha`);
-
         return;
       }
 
@@ -319,6 +327,7 @@ class AnchorProgramService {
 
       const signedTx = await this.wallet.signTransaction(transaction);
       const txSig = await  this.connection.sendRawTransaction(signedTx.serialize());
+
       
       console.log(`Position updated: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
 
@@ -415,7 +424,7 @@ class AnchorProgramService {
       
       console.log(`(ER) Commited: https://solana.fm/tx/${signature}?cluster=devnet-alpha`);
     } catch (error) {
-      console.error(error)
+      console.error("error in (ER) commit", error)
     }
   }
 
@@ -449,7 +458,7 @@ class AnchorProgramService {
       
       console.log(`(ER) Commited: https://solana.fm/tx/${signature}?cluster=devnet-alpha`);
     } catch (error) {
-      console.error(error)
+      console.error("error in (ER) undelegate",  error)
     }
   }
 }

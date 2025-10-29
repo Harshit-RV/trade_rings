@@ -4,6 +4,7 @@ import { PublicKey } from "@solana/web3.js";
 import { useQuery } from "react-query";
 import RegisterForArenaCard from "@/components/RegisterForArenaCard";
 import type { ArenaAccount, TradingAccountForArena } from "@/types/types";
+import { useEffect } from "react";
 
 interface RegisterForArenaQueryData {
   arena: ArenaAccount | undefined
@@ -42,6 +43,12 @@ const RegisterForArena = () => {
     }
   }
 
+  useEffect(() => {
+    if (arenaAndTradingAccount?.tradingAccount != null) {
+      navigate(`/trade/${arenaId}`);
+    }
+  }, [arenaAndTradingAccount, arenaId, navigate]);
+
   if (isLoading || arenaAndTradingAccount == undefined) {
     return (
       <div>loading</div>
@@ -49,13 +56,12 @@ const RegisterForArena = () => {
   }
 
   if (arenaAndTradingAccount.tradingAccount != null) {
-    navigate(`/trade/${arenaId}`)
     return null;
   }
 
   return (
-    <div className="flex justify-center p-10">
-      <div className="max-w-2/3">
+    <div className="flex justify-center p-2 sm:p-10">
+      <div className="sm:w-full lg:w-2/3">
         <RegisterForArenaCard
           name={arenaAndTradingAccount.arena?.arenaName ?? ""}
           entryFeeInSOL={arenaAndTradingAccount.arena?.entryFeeInLamports.toNumber() ?? 0 / 10 ** 9}

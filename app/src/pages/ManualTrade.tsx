@@ -6,7 +6,7 @@ import Leaderboard from "@/components/main-tiles/Leaderboard";
 import ManualDelegate from "@/components/main-tiles/ManualDelegate";
 import { ManualTradeDataProvider } from "@/contexts/ManualTradeDataContext";
 import toast from "react-hot-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useProgramServices from "@/hooks/useProgramServices";
 import useManualTradeData from "@/hooks/useManualTradeData";
 import type { OpenPosAccAddress, SwapTransaction } from "@/types/types";
@@ -43,15 +43,22 @@ const ManualTrade = () => {
   const [ step1InProgress, setStep1InProgress ] = useState(false);
   const [ step2InProgress, setStep2InProgress ] = useState(false);
 
+  useEffect(() => {
+    if (tradingAccount == null) {
+      navigate(`/register/${arenaId}`);
+    }
+  }, [tradingAccount, arenaId, navigate]);
+
   if (tradingAccount == null) {
-    navigate(`/register/${arenaId}`);
     return null;
   }
 
+  // TOOD: MAJOR: REMOVING SUPPORT FOR EPHEMERAL ROLLUP IN THESE FUNCTION BECAUSE OF A BREAKING CHANGE WHICH BREKS THIS FLOW
+  // check next comment for context 
   const handleSwapTx = async (tx: SwapTransaction) => {
-    if (!arenaId || !programServiceER) return;
+    if (!arenaId || !programService) return;
 
-    const service = programServiceER;
+    const service = programService;
 
     if (tx.fromToken.symbol === tx.toToken.symbol) return toast.error("Select two different tokens");
 
@@ -100,11 +107,88 @@ const ManualTrade = () => {
     toast.success("Updated")
   };
 
+  // TODO: MAJOR: REMOVING SUPPORT FOR EPHEMERAL ROLLUP IN THESE FUNCTION BECAUSE OF A BREAKING CHANGE WHICH BREKS THIS FLOW
+  // ISSUE: transactions sending is not working. Context: https://discord.com/channels/943797222162726962/1432448513270218884
+  // const handleUndelegateStep = async () => {
+  //   if (!programServiceER || !tradingAccount) return;
+  //   try {
+  //     setStep1InProgress(true);
+  //     await programServiceER.undelegateAccount(String(tradingAccount.selfkey));
+  //     setStep1Done(true);
+  //     toast.success("Trading account undelegated on rollup");
+  //   } catch {
+  //     toast.error("Failed to undelegate");
+  //   } finally {
+  //     setStep1InProgress(false);
+  //   }
+  // };
+
+  // // Step 2: Create new position for the asset and re-delegate on base (single signature)
+  // const handleCreateAndDelegateStep = async () => {
+  //   if (!programService || !programServiceER || !wallet || !tradingAccount || !arenaId || !newPosAsset || !newPosAmount) return;
+  //   try {
+  //     setStep2InProgress(true);
+      
+  //     // TODO: get correct price account per asset
+  //     const priceAccount = "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo";
+
+  //     // Compute new position PDA (seed is current count)
+  //     const seed = tradingAccount.openPositionsCount;
+  //     const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
+  //     const [ posPda ] = PublicKey.findProgramAddressSync(
+  //       [
+  //         Buffer.from(OPEN_POSITION_ACCOUNT_SEED),
+  //         wallet.publicKey.toBuffer(),
+  //         tradingAccount.selfkey.toBuffer(),
+  //         countLE,
+  //       ],
+  //       programService.program.programId,
+  //     );
+
+  //     const newPos : OpenPosAccAddress = { selfKey: posPda, seed };
+
+  //     // Build a single base-layer transaction with all instructions
+  //     const openPosTx = await programService.openPositionInArena(arenaId, newPosAsset, priceAccount, newPosAmount, true);
+  //     if (!openPosTx) return;
+  //     const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true);
+  //     if (!delegateTradeAccTx) return;
+  //     const delegateOpenPosTx = await programService.delegateOpenPosAccount(arenaId, newPos, true);
+  //     if (!delegateOpenPosTx) return;
+
+  //     const compositeTx = new Transaction();
+  //     compositeTx.add(
+  //       ...openPosTx.instructions,
+  //       ...delegateTradeAccTx.instructions,
+  //       ...delegateOpenPosTx.instructions,
+  //     );
+  //     compositeTx.feePayer = wallet.publicKey;
+  //     compositeTx.recentBlockhash = (await programService.connection.getLatestBlockhash()).blockhash;
+
+  //     const signedTx = await wallet.signTransaction(compositeTx);
+  //     const sig = await programService.connection.sendRawTransaction(signedTx.serialize());
+  //     await programService.connection.confirmTransaction(sig, "confirmed");
+
+  //     // Refresh data
+  //     queryClient.invalidateQueries([`account-info-${tradingAccount.selfkey.toBase58()}`]);
+  //     queryClient.invalidateQueries(["openPosAddresses", arenaId]);
+
+  //     toast.success("Account created and delegated. Purchase completed.");
+  //     setOpenNewPosRequired(false);
+  //     setNewPosAsset(null);
+  //     setNewPosAmount(0);
+  //   } catch {
+  //     toast.error("Failed to create/delegate account");
+  //   } finally {
+  //     setStep2InProgress(false);
+  //   }
+  // };
+
+
   const handleUndelegateStep = async () => {
     if (!programServiceER || !tradingAccount) return;
     try {
       setStep1InProgress(true);
-      await programServiceER.undelegateAccount(String(tradingAccount.selfkey));
+      // await programServiceER.undelegateAccount(String(tradingAccount.selfkey));
       setStep1Done(true);
       toast.success("Trading account undelegated on rollup");
     } catch {
@@ -149,8 +233,8 @@ const ManualTrade = () => {
       const compositeTx = new Transaction();
       compositeTx.add(
         ...openPosTx.instructions,
-        ...delegateTradeAccTx.instructions,
-        ...delegateOpenPosTx.instructions,
+        // ...delegateTradeAccTx.instructions,
+        // ...delegateOpenPosTx.instructions,
       );
       compositeTx.feePayer = wallet.publicKey;
       compositeTx.recentBlockhash = (await programService.connection.getLatestBlockhash()).blockhash;
@@ -188,8 +272,8 @@ const ManualTrade = () => {
       </div>
       
       <div className="w-[35%]">
-        {/* <Button onClick={ () => programService?.createArena("Test Arena", 1761609567, 1761710133) }>Create Arena</Button>
-        <Button onClick={ () => programService?.createArena("Test Arena", 1761609567, 1761710133) }>Create Arena</Button> */}
+        {/* <Button onClick={ () => programService?.createArena("5th Arena", 1761757671, 1762720133) }>Create Arena</Button> */}
+        {/* <Button onClick={ () => programService?.createArena("Test Arena", 1761756671, 1762720133) }>Create Arena</Button> */}
         <SwapComponent 
           swapHandler={handleSwapTx}
           // TODO: pass proper balances here

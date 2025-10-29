@@ -1,6 +1,3 @@
-import { useState } from "react";
-import { Check, Search } from "lucide-react";
-import { TOKENS } from "@/data/tokens";
 import { Button } from "./ui/button";
 
 interface RegisterForArenaProps {
@@ -13,21 +10,22 @@ interface RegisterForArenaProps {
 }
 
 const RegisterForArena = ( props: RegisterForArenaProps ) => {
-  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  const toggleToken = (symbol: string) => {
-    setSelectedTokens(prev => 
-      prev.includes(symbol) 
-        ? prev.filter(s => s !== symbol)
-        : [...prev, symbol]
-    );
-  };
 
-  const filteredTokens = TOKENS.filter(token =>
-    token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    token.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
+  // const [searchQuery, setSearchQuery] = useState("");
+  
+  // const toggleToken = (symbol: string) => {
+  //   setSelectedTokens(prev => 
+  //     prev.includes(symbol) 
+  //       ? prev.filter(s => s !== symbol)
+  //       : [...prev, symbol]
+  //   );
+  // };
+
+  // const filteredTokens = TOKENS.filter(token =>
+  //   token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //   token.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // );
 
   return (
     <div className="bg-[#1F1F1F]/60 p-6 rounded-4xl w-full flex flex-col gap-4 border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
@@ -80,7 +78,7 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
         </div>
       </div>
 
-      <div className="rounded-xl w-full px-5 py-4 border border-[#3C3C3C]/60 flex flex-col gap-3">
+      {/* <div className="rounded-xl w-full px-5 py-4 border border-[#3C3C3C]/60 flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
           <p className="font-bold text-md">Select assets you trade the most</p>
           <span className="text-sm text-gray-400">You can trade other assets as well but it will require an extra step which may slow your momentum while trading</span>
@@ -136,7 +134,7 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
           )}
         </div>
         <span className="text-sm font-bold text-yellow-300/70">You can claim back the rent of all accounts at the end of the arena</span>
-      </div>
+      </div> */}
 
       <Button
         onClick={props.registrationHandler}
