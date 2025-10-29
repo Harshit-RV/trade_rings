@@ -1,0 +1,78 @@
+import useProgramServices from "@/hooks/useProgramServices";
+import { useNavigate, useParams } from "react-router";
+import { PublicKey } from "@solana/web3.js";
+import { useQuery } from "react-query";
+import RegisterForArenaCard from "@/components/RegisterForArenaCard";
+import type { ArenaAccount, TradingAccountForArena } from "@/types/types";
+import { useEffect } from "react";
+
+interface RegisterForArenaQueryData {
+  arena: ArenaAccount | undefined
+  tradingAccount: TradingAccountForArena | undefined
+}
+
+const RegisterForArena = () => {
+  const { arenaId } = useParams();
+  const { programService } = useProgramServices();
+  const navigate = useNavigate();
+
+  const fetchArenaAndTradingAccount = async () : Promise<RegisterForArenaQueryData> => {
+     if (!programService || !arenaId) return { arena: undefined, tradingAccount: undefined };
+ 
+     const arena = await programService.fetchArenaAccountData(new PublicKey(arenaId));
+     const tradingAccount = await programService.fetchTradingAccountForArena(new PublicKey(arenaId));
+ 
+     return {
+      arena: arena ?? undefined,
+      tradingAccount: tradingAccount ?? undefined
+     };
+   }
+
+  const { data: arenaAndTradingAccount, isLoading, refetch } = useQuery(`arena-info-${arenaId}`, fetchArenaAndTradingAccount, {
+     enabled: programService != null
+  })
+
+  const registerForArena = async () => {
+    if (!arenaId || !programService) return 
+
+    try {
+      await programService.createTradingAcc(arenaId)
+      refetch()
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(() => {
+    if (arenaAndTradingAccount?.tradingAccount != null) {
+      navigate(`/trade/${arenaId}`);
+    }
+  }, [arenaAndTradingAccount, arenaId, navigate]);
+
+  if (isLoading || arenaAndTradingAccount == undefined) {
+    return (
+      <div>loading</div>
+    )
+  }
+
+  if (arenaAndTradingAccount.tradingAccount != null) {
+    return null;
+  }
+
+  return (
+    <div className="flex justify-center p-2 sm:p-10">
+      <div className="sm:w-full lg:w-2/3">
+        <RegisterForArenaCard
+          name={arenaAndTradingAccount.arena?.arenaName ?? ""}
+          entryFeeInSOL={arenaAndTradingAccount.arena?.entryFeeInLamports.toNumber() ?? 0 / 10 ** 9}
+          numberOfParticipants={arenaAndTradingAccount.arena?.totalTraders ?? 0}
+          startEpoch={Number(arenaAndTradingAccount.arena?.startsAt ?? 0)}
+          endEpoch={Number(arenaAndTradingAccount.arena?.expiresAt ?? 0)}
+          registrationHandler={() => registerForArena()}
+        />
+      </div>
+    </div>
+  )
+}
+
+export default RegisterForArena;

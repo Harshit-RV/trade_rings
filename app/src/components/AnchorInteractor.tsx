@@ -348,7 +348,7 @@
 
 //           const [pda] = PublicKey.findProgramAddressSync(
 //             [
-//               Buffer.from("open_position_account"),
+//               Buffer.from(OPEN_POSITION_ACCOUNT_SEED),
 //               wallet.publicKey.toBuffer(),
 //               tradingAccount.selfkey.toBuffer(),
 //               countLE

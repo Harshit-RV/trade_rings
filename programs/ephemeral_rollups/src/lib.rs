@@ -10,7 +10,9 @@ use ephemeral_rollups_sdk::ephem::{commit_accounts, commit_and_undelegate_accoun
 
 declare_id!("BoKzb5RyCGLM5VuEThDesURM5hi3TRfVF84kYoiokrop");
 
-pub const PROFILE_ACCOUNT_SEED: &[u8] = b"user_profile_account";
+const ORIGINAL_OWNER: &str = "5azNmbuv4jJbuGPZUEjZq98rxn2PBjaYUnsTfE5ov43R";
+
+pub const ADMIN_CONFIG_ACCOUNT_SEED: &[u8] = b"admin_config_account";
 pub const ARENA_ACCOUNT_SEED: &[u8] = b"arena_account";
 pub const TRADING_ACCOUNT_SEED: &[u8] = b"trading_account_for_arena";
 pub const OPEN_POSITION_ACCOUNT_SEED: &[u8] = b"open_position_account";
@@ -33,40 +35,54 @@ fn get_total_cost(price: i64, exponent: i32, quantity_scaled: i64) -> i128 {
 pub mod ephemeral_rollups {
     use crate::errors::EphemeralRollupError;
     use super::*;
-    
-    // admin_fn -> admin functions
+    // admin functions
+    pub fn initialize_admin_config_account(ctx: Context<InitAdminConfigAccount>) -> Result<()> {
+        #[cfg(not(feature = "test-admin"))]
+        require_keys_eq!(ctx.accounts.signer.key(), ORIGINAL_OWNER.parse::<Pubkey>().unwrap(), EphemeralRollupError::Unauthorised);
 
-    // only needed to create arenas
-    pub fn admin_fn_create_profile(ctx: Context<CreateUserProfile>, name: String) -> Result<()> {
-        require!(name.len() <= 10, EphemeralRollupError::NameTooLong);
+        let admin_config = &mut ctx.accounts.admin_config_account;
 
-        let profile_account = &mut ctx.accounts.profile_account;
-
-        profile_account.bump = ctx.bumps.profile_account;
-        profile_account.pubkey = *ctx.accounts.signer.key;
-        profile_account.name = name;
+        admin_config.bump = ctx.bumps.admin_config_account;
+        admin_config.admin_pubkey = *ctx.accounts.signer.key;
+        admin_config.next_arena_pda_seed = 0;
 
         Ok(())
     }
 
-    pub fn admin_fn_create_arena(ctx: Context<CreateArena>) -> Result<()> {
-        // TODO: add checks, not everyone should be able to create an arena
-
+    pub fn create_arena(ctx: Context<CreateArena>, entry_fee_in_lamports: u64, name: String, starts_at: i64, expires_at: i64) -> Result<()> {
+        let admin_config = &mut ctx.accounts.admin_config_account;
         let arena_account = &mut ctx.accounts.arena_account;
+
+        let clock = Clock::get()?;
+
+        require!(name.len() <= 30, EphemeralRollupError::NameTooLong);
+        require!(expires_at > clock.unix_timestamp, EphemeralRollupError::ExpiryTimeInThePast);
+        require!(starts_at > clock.unix_timestamp, EphemeralRollupError::StartTimeInThePast);
+        // require!(entry_fee_in_lamports > 0, EphemeralRollupError::EntryFeeTooLow);
+
+        require_keys_eq!(ctx.accounts.signer.key(), admin_config.admin_pubkey, EphemeralRollupError::Unauthorised);
 
         arena_account.bump = ctx.bumps.arena_account;
         arena_account.creator = *ctx.accounts.signer.key;
-        ctx.accounts.signer_profile_account.arenas_created_count += 1;
+        arena_account.arena_name = name;
+        arena_account.total_traders = 0;
+        arena_account.starts_at = starts_at;
+        arena_account.expires_at = expires_at;
+        arena_account.entry_fee_in_lamports = entry_fee_in_lamports;
 
+        admin_config.next_arena_pda_seed += 1;
         Ok(())
     }
 
     pub fn create_trading_account_for_arena(ctx: Context<CreateTradingAccountForArena>) -> Result<()> {
         let trading_account = &mut ctx.accounts.trading_account_for_arena;
+        let arena_account = &mut ctx.accounts.arena_account;
 
         trading_account.bump = ctx.bumps.trading_account_for_arena;
         trading_account.authority = *ctx.accounts.signer.key;
         trading_account.open_positions_count = 0;
+
+        arena_account.total_traders += 1;
 
         // TODO: figure out what the starting balance should be
         trading_account.micro_usdc_balance = 1_000_000_000_000; // 1 million USDC
@@ -217,39 +233,41 @@ pub mod ephemeral_rollups {
     }
 }
 
-
 #[account]
 #[derive(InitSpace)]
-pub struct UserProfile {
-    pubkey: Pubkey,
-    arenas_created_count: u8,
+pub struct AdminConfig {
+    admin_pubkey: Pubkey,
     bump: u8,
-    #[max_len(10)]
-    name: String,
+    next_arena_pda_seed: u16
 }
+
 #[derive(Accounts)]
-pub struct CreateUserProfile<'info> {
+pub struct InitAdminConfigAccount<'info> {
     #[account(
         init,
         payer = signer,
-        space = 8 + UserProfile::INIT_SPACE,
-        seeds = [PROFILE_ACCOUNT_SEED, signer.key().as_ref()],
+        space = 8 + AdminConfig::INIT_SPACE,
+        seeds = [ ADMIN_CONFIG_ACCOUNT_SEED ],
         bump
     )]
-    pub profile_account: Account<'info, UserProfile>,
+    pub admin_config_account: Account<'info, AdminConfig>,
 
     #[account(mut)]
     pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
-
 #[account]
 #[derive(InitSpace)]
 pub struct ArenaAccount {
-    // TODO: should we add a field that stores the public key of this PDA inside the data?
+    #[max_len(30)]
+    arena_name: String,
     creator: Pubkey,
     bump: u8,
+    total_traders: u16,
+    starts_at: i64,
+    expires_at: i64,
+    entry_fee_in_lamports: u64,
 }
 
 #[derive(Accounts)]
@@ -258,17 +276,18 @@ pub struct CreateArena<'info> {
         init,
         payer = signer,
         space = 8 + ArenaAccount::INIT_SPACE,
-        seeds = [ARENA_ACCOUNT_SEED, signer.key().as_ref(), &signer_profile_account.arenas_created_count.to_le_bytes()],
+        seeds = [ARENA_ACCOUNT_SEED, &admin_config_account.next_arena_pda_seed.to_le_bytes()],
         bump
     )]
     pub arena_account: Account<'info, ArenaAccount>,
 
     #[account(
-        mut, 
-        seeds = [PROFILE_ACCOUNT_SEED, signer.key().as_ref()],
-        bump = signer_profile_account.bump
+        mut,
+        seeds = [ ADMIN_CONFIG_ACCOUNT_SEED ],
+        bump = admin_config_account.bump
     )]
-    pub signer_profile_account: Account<'info, UserProfile>,
+    pub admin_config_account: Account<'info, AdminConfig>,
+
 
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -301,6 +320,7 @@ pub struct CreateTradingAccountForArena<'info> {
     )]
     pub trading_account_for_arena: Account<'info, TradingAccountForArena>,
 
+    #[account(mut)]
     pub arena_account: Account<'info, ArenaAccount>,
 
     #[account(mut)]
