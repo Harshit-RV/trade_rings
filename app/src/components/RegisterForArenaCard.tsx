@@ -15,6 +15,8 @@ interface RegisterForArenaProps {
   name: string,
   entryFeeInSOL: number
   numberOfParticipants: number
+  startEpoch: number
+  endEpoch: number
 }
 
 const RegisterForArena = ( props: RegisterForArenaProps ) => {
@@ -47,11 +49,35 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
         <div className="rounded-xl px-5 py-3 border border-[#3C3C3C]/60 flex justify-between">
           <div className="flex flex-col justify-center items-start text-left">
             <p className="text-sm font-bold text-gray-400">Starts</p>
-            <p>6 pm, Oct 26, 2025</p>
+            <p>
+              {props.startEpoch
+                ? `${new Date(props.startEpoch * 1000).toLocaleString(undefined, {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}` 
+                : "--"}
+            </p>
+            <p className="text-xs mt-1 text-gray-400">{Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
           </div>
           <div className="flex flex-col justify-center items-end text-right">
             <p className="text-sm font-bold text-gray-400">Ends</p>
-            <p>6 pm, Oct 26, 2025</p>
+            <p>
+              {props.endEpoch
+                ? `${new Date(props.endEpoch * 1000).toLocaleString(undefined, {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}`
+                : "--"}
+            </p>
+            <p className="text-xs mt-1 text-gray-400">{Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
           </div>
         </div>
         
@@ -83,7 +109,7 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
             />
           </div>
           
-          <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-2">
+          <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-2">
             {filteredTokens.length > 0 ? (
               filteredTokens.map((token) => (
                 <div

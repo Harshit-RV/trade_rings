@@ -329,7 +329,24 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "entry_fee_in_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "starts_at",
+          "type": "i64"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
     },
     {
       "name": "create_trading_account_for_arena",
@@ -391,7 +408,8 @@
           }
         },
         {
-          "name": "arena_account"
+          "name": "arena_account",
+          "writable": true
         },
         {
           "name": "signer",
@@ -1237,6 +1255,21 @@
       "code": 6005,
       "name": "ShortingUnsupported",
       "msg": "Shorting an asset is not supported as of now."
+    },
+    {
+      "code": 6006,
+      "name": "ExpiryTimeInThePast",
+      "msg": "Expiry time must be in the future"
+    },
+    {
+      "code": 6007,
+      "name": "StartTimeInThePast",
+      "msg": "Start time must be in the future"
+    },
+    {
+      "code": 6008,
+      "name": "EntryFeeTooLow",
+      "msg": "Entry fee must be greater than 0"
     }
   ],
   "types": [
@@ -1266,12 +1299,32 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "arena_name",
+            "type": "string"
+          },
+          {
             "name": "creator",
             "type": "pubkey"
           },
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "total_traders",
+            "type": "u16"
+          },
+          {
+            "name": "starts_at",
+            "type": "i64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "entry_fee_in_lamports",
+            "type": "u64"
           }
         ]
       }

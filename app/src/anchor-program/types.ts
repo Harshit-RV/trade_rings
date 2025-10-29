@@ -335,7 +335,24 @@ export type EphemeralRollups = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "entryFeeInLamports",
+          "type": "u64"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "startsAt",
+          "type": "i64"
+        },
+        {
+          "name": "expiresAt",
+          "type": "i64"
+        }
+      ]
     },
     {
       "name": "createTradingAccountForArena",
@@ -397,7 +414,8 @@ export type EphemeralRollups = {
           }
         },
         {
-          "name": "arenaAccount"
+          "name": "arenaAccount",
+          "writable": true
         },
         {
           "name": "signer",
@@ -1243,6 +1261,21 @@ export type EphemeralRollups = {
       "code": 6005,
       "name": "shortingUnsupported",
       "msg": "Shorting an asset is not supported as of now."
+    },
+    {
+      "code": 6006,
+      "name": "expiryTimeInThePast",
+      "msg": "Expiry time must be in the future"
+    },
+    {
+      "code": 6007,
+      "name": "startTimeInThePast",
+      "msg": "Start time must be in the future"
+    },
+    {
+      "code": 6008,
+      "name": "entryFeeTooLow",
+      "msg": "Entry fee must be greater than 0"
     }
   ],
   "types": [
@@ -1272,12 +1305,32 @@ export type EphemeralRollups = {
         "kind": "struct",
         "fields": [
           {
+            "name": "arenaName",
+            "type": "string"
+          },
+          {
             "name": "creator",
             "type": "pubkey"
           },
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "totalTraders",
+            "type": "u16"
+          },
+          {
+            "name": "startsAt",
+            "type": "i64"
+          },
+          {
+            "name": "expiresAt",
+            "type": "i64"
+          },
+          {
+            "name": "entryFeeInLamports",
+            "type": "u64"
           }
         ]
       }

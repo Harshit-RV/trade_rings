@@ -47,8 +47,13 @@ export interface AdminConfig {
 
 export interface ArenaAccount {
   selfkey: PublicKey;
+  arenaName: string;
   creator: PublicKey;
   bump: number;
+  totalTraders: number;
+  startsAt: BN;
+  expiresAt: BN;
+  entryFeeInLamports: BN;
 }
 
 export interface OpenPosAccAddress {

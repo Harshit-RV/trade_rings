@@ -2,7 +2,7 @@ import { BN, type Program } from "@coral-xyz/anchor"
 import type { EphemeralRollups } from "./types"
 import type { AnchorWallet } from "@solana/wallet-adapter-react"
 import { Connection, Keypair, PublicKey } from "@solana/web3.js"
-import { ADMIN_CONFIG_ACCOUNT_SEED, ARENA_ACCOUNT_SEED, QUANTITY_SCALING_FACTOR } from "@/constants";
+import { ADMIN_CONFIG_ACCOUNT_SEED, ARENA_ACCOUNT_SEED, OPEN_POSITION_ACCOUNT_SEED, QUANTITY_SCALING_FACTOR, TRADING_ACCOUNT_SEED } from "@/constants";
 import type { AdminConfig, ArenaAccount, OpenPosAccAddress, TradingAccountForArena } from "@/types/types";
 
 class AnchorProgramService {
@@ -56,19 +56,19 @@ class AnchorProgramService {
         try {
           const countLE = new BN(i).toArrayLike(Buffer, "le", 2);
           
-          const [pda] = PublicKey.findProgramAddressSync(
+          const [ pda ] = PublicKey.findProgramAddressSync(
             [ Buffer.from(ARENA_ACCOUNT_SEED), countLE ],
             new PublicKey(this.program.programId),
           );
 
           const arenaAccount = await this.program.account.arenaAccount.fetch(pda);
+
           arenas.push({
             ...arenaAccount,
             selfkey: pda,
           });
-        } catch (error) {
-          console.error(`Error fetching arena ${i}:`, error);
-        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_) { /* empty */ }
       }
       
       return arenas;
@@ -78,31 +78,37 @@ class AnchorProgramService {
     }
   };
 
-  createArena = async () => {
-    try {      
+  // createArena = async (name: string, startsAt: number, expiresAt: number) => {
+  //   try {      
+  //     const transaction = await this.program.methods
+  //       .createArena(
+  //         new BN(0),
+  //         name,
+  //         new BN(startsAt),
+  //         new BN(expiresAt)
+  //       )
+  //       .accounts({
+  //         signer: this.wallet.publicKey,
+  //       })
+  //       .transaction();
 
-      const transaction = await this.program.methods
-        .createArena()
-        .transaction();
+  //     transaction.feePayer = this.wallet.publicKey;
+  //     transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
 
-      transaction.feePayer = this.wallet.publicKey;
-      transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
+  //     const signedTx = await this.wallet.signTransaction(transaction);
+  //     const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
 
-      const signedTx = await this.wallet.signTransaction(transaction);
-      const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
-
-      console.log(`Position opened: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
-    } catch (error) {
-      console.error("Error opening position:", error);
-    }
-  };
-
+  //     console.log(`Position opened: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+  //   } catch (error) {
+  //     console.error("Error opening position:", error);
+  //   }
+  // };
 
   fetchTradingAccountForArena = async (arenaPubkey: PublicKey) : Promise<TradingAccountForArena | null> => {
     try {
       const [ tradingPda ] = PublicKey.findProgramAddressSync(
         [
-          Buffer.from("trading_account_for_arena"),
+          Buffer.from(TRADING_ACCOUNT_SEED),
           this.wallet.publicKey.toBuffer(),
           arenaPubkey.toBuffer()
         ],
@@ -126,7 +132,7 @@ class AnchorProgramService {
   //   try {
   //     const [ tradingPda ] = PublicKey.findProgramAddressSync(
   //       [
-  //         Buffer.from("trading_account_for_arena"),
+  //         Buffer.from(TRADING_ACCOUNT_SEED),
   //         this.wallet.publicKey.toBuffer(),
   //         arenaPubkey.toBuffer()
   //       ],
@@ -153,7 +159,7 @@ class AnchorProgramService {
 
   //         const [ pda ] = PublicKey.findProgramAddressSync(
   //           [
-  //             Buffer.from("open_position_account"),
+  //             Buffer.from(OPEN_POSITION_ACCOUNT_SEED),
   //             this.wallet.publicKey.toBuffer(),
   //             tradingAccount.selfkey.toBuffer(),
   //             countLE
@@ -187,7 +193,7 @@ class AnchorProgramService {
 
           const [ pda ] = PublicKey.findProgramAddressSync(
             [
-              Buffer.from("open_position_account"),
+              Buffer.from(OPEN_POSITION_ACCOUNT_SEED),
               this.wallet.publicKey.toBuffer(),
               tradingAccount.selfkey.toBuffer(),
               countLE
@@ -197,7 +203,7 @@ class AnchorProgramService {
           
           positions.push({ selfKey: pda, seed: i});
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) { /* empty */ }
+        } catch (_) { /* empty */ }
       }
 
       return positions;
@@ -315,7 +321,7 @@ class AnchorProgramService {
 
       const [ tradingPda ] = PublicKey.findProgramAddressSync(
         [
-          Buffer.from("trading_account_for_arena"),
+          Buffer.from(TRADING_ACCOUNT_SEED),
           this.wallet.publicKey.toBuffer(),
           new PublicKey(arenaPubkey).toBuffer()
         ],
