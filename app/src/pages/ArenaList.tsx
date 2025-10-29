@@ -59,27 +59,19 @@ const ArenaList = () => {
           arenas.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {arenas.map((arena, index) => (
-                <RegisterForArenaCard
+                <ArenaCard 
                   key={index}
-                  name={arena.arenaName}
-                  entryFeeInSOL={arena.entryFeeInLamports.toNumber() / 10 ** 9}
-                  numberOfParticipants={arena.totalTraders}
-                  startEpoch={Number(arena.startsAt)}
-                  endEpoch={Number(arena.expiresAt)}
-                >
-                  <ArenaCard 
-                    name={arena.arenaName} 
-                    author={arena.creator.toBase58()} 
-                    timeline={getTimelineFromEpochTime(Number(arena.startsAt), Number(arena.expiresAt))} 
-                    link={`/trade/${arena.selfkey}`} 
-                    people={arena.totalTraders} 
-                    status={"Registered"} 
-                  />
-                </RegisterForArenaCard>
+                  id={arena.selfkey}
+                  name={arena.arenaName} 
+                  author={arena.creator.toBase58()} 
+                  timeline={getTimelineFromEpochTime(Number(arena.startsAt), Number(arena.expiresAt))} 
+                  people={arena.totalTraders} 
+                  stillOpen={Number(arena.expiresAt) > Date.now() / 1000}
+                />
               ))}
             </div>
           ) : (
-            <div>No arenas found for your account</div>
+            <div>No arenas found</div>
           )
         )
       }

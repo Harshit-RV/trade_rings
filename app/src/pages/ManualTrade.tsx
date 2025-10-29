@@ -13,6 +13,9 @@ import type { OpenPosAccAddress, SwapTransaction } from "@/types/types";
 import { useQueryClient } from "react-query";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey, Transaction } from "@solana/web3.js";
+import { OPEN_POSITION_ACCOUNT_SEED } from "@/constants";
+import { useNavigate } from "react-router";
+
 
 const ManualTradeWrapper = () => {
   return (
@@ -22,10 +25,13 @@ const ManualTradeWrapper = () => {
   )
 }
 
+
 const ManualTrade = () => {
   const { arenaId } = useParams();
   const { programServiceER, programService, wallet } = useProgramServices();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
 
   const { tradingAccount, openPosAddresses, isLoading, posMappedByAsset } = useManualTradeData();
 
@@ -36,6 +42,11 @@ const ManualTrade = () => {
   const [ step1Done, setStep1Done ] = useState(false);
   const [ step1InProgress, setStep1InProgress ] = useState(false);
   const [ step2InProgress, setStep2InProgress ] = useState(false);
+
+  if (tradingAccount == null) {
+    navigate(`/register/${arenaId}`);
+    return null;
+  }
 
   const handleSwapTx = async (tx: SwapTransaction) => {
     if (!arenaId || !programServiceER) return;
@@ -89,7 +100,6 @@ const ManualTrade = () => {
     toast.success("Updated")
   };
 
-  
   const handleUndelegateStep = async () => {
     if (!programServiceER || !tradingAccount) return;
     try {
@@ -118,7 +128,7 @@ const ManualTrade = () => {
       const countLE = new BN(seed).toArrayLike(Buffer, "le", 1);
       const [ posPda ] = PublicKey.findProgramAddressSync(
         [
-          Buffer.from("open_position_account"),
+          Buffer.from(OPEN_POSITION_ACCOUNT_SEED),
           wallet.publicKey.toBuffer(),
           tradingAccount.selfkey.toBuffer(),
           countLE,
@@ -178,6 +188,8 @@ const ManualTrade = () => {
       </div>
       
       <div className="w-[35%]">
+        {/* <Button onClick={ () => programService?.createArena("Test Arena", 1761609567, 1761710133) }>Create Arena</Button>
+        <Button onClick={ () => programService?.createArena("Test Arena", 1761609567, 1761710133) }>Create Arena</Button> */}
         <SwapComponent 
           swapHandler={handleSwapTx}
           // TODO: pass proper balances here

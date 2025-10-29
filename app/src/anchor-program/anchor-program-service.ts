@@ -28,6 +28,20 @@ class AnchorProgramService {
     return isAccountDelegated;
   }
 
+  fetchArenaAccountData = async (account: PublicKey) : Promise<ArenaAccount | null> => {
+    try {
+      const arenaAccount = await this.program.account.arenaAccount.fetch(account);
+      
+      return {
+        ...arenaAccount,
+        selfkey: account,
+      };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_) {
+      return null
+    }
+  }
+
 
   private fetchAdminConfigAccount = async () => {
     try {
