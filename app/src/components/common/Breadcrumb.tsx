@@ -9,7 +9,7 @@ const Breadcrumb = () => {
     const segments = pathname.split('/').filter(Boolean);
     
     if (segments.length === 0) {
-      return [{ label: 'Home', path: '/' }];
+      return [{ label: 'Arenas', path: '/' }];
     }
     
     if (segments[0] === 'arena') {
@@ -24,6 +24,13 @@ const Breadcrumb = () => {
         { label: `Trading on ${segments[1].slice(0, 8)}...`, path: `/trade/${segments[1]}` }
       ];
     }
+
+    if (segments[0] === 'register' && segments[1]) {
+      return [
+        { label: 'Arenas', path: '/' },
+        { label: `Register for ${segments[1].slice(0, 8)}...`, path: `/trade/${segments[1]}` }
+      ];
+    }
     
     if (segments[0] === 'docs') {
       return [
@@ -31,7 +38,7 @@ const Breadcrumb = () => {
       ];
     }
     
-    return [{ label: 'Home', path: '/' }];
+    return [{ label: 'Arenas', path: '/' }];
   };
 
   const breadcrumbs = getBreadcrumbs();
@@ -45,16 +52,12 @@ const Breadcrumb = () => {
             <span className="text-gray-400 mx-2">{`>`}</span>
           )}
 
-          {index === breadcrumbs.length - 1 ? (
-            <span className="text-white font-bold">{breadcrumb.label}</span>
-          ) : (
-            <Link 
-              to={breadcrumb.path}
-              className="text-gray-300 hover:text-white transition-colors font-bold"
-            >
-              {breadcrumb.label}
-            </Link>
-          )}
+          <Link 
+            to={breadcrumb.path}
+            className="text-gray-300 hover:text-white transition-colors font-bold"
+          >
+            {breadcrumb.label}
+          </Link>
 
         </div>
       ))}

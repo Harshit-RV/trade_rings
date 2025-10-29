@@ -14,4 +14,10 @@ pub enum EphemeralRollupError {
     InsufficientFunds,
     #[msg("Shorting an asset is not supported as of now.")]
     ShortingUnsupported,
+    #[msg("Expiry time must be in the future")]
+    ExpiryTimeInThePast,
+    #[msg("Start time must be in the future")]
+    StartTimeInThePast,
+    #[msg("Entry fee must be greater than 0")]
+    EntryFeeTooLow,
 }
