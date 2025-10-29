@@ -5,17 +5,17 @@ import { useQuery } from "react-query";
 import RegisterForArenaCard from "@/components/RegisterForArenaCard";
 import type { ArenaAccount, TradingAccountForArena } from "@/types/types";
 
-interface ArenaPageQueryData {
+interface RegisterForArenaQueryData {
   arena: ArenaAccount | undefined
   tradingAccount: TradingAccountForArena | undefined
 }
 
-const ArenaPage = () => {
+const RegisterForArena = () => {
   const { arenaId } = useParams();
   const { programService } = useProgramServices();
   const navigate = useNavigate();
 
-  const fetchArenaAndTradingAccount = async () : Promise<ArenaPageQueryData> => {
+  const fetchArenaAndTradingAccount = async () : Promise<RegisterForArenaQueryData> => {
      if (!programService || !arenaId) return { arena: undefined, tradingAccount: undefined };
  
      const arena = await programService.fetchArenaAccountData(new PublicKey(arenaId));
@@ -26,10 +26,21 @@ const ArenaPage = () => {
       tradingAccount: tradingAccount ?? undefined
      };
    }
- 
-  const { data: arenaAndTradingAccount, isLoading } = useQuery(`arena-info-${arenaId}`, fetchArenaAndTradingAccount, {
+
+  const { data: arenaAndTradingAccount, isLoading, refetch } = useQuery(`arena-info-${arenaId}`, fetchArenaAndTradingAccount, {
      enabled: programService != null
   })
+
+  const registerForArena = async () => {
+    if (!arenaId || !programService) return 
+
+    try {
+      await programService.createTradingAcc(arenaId)
+      refetch()
+    } catch (error) {
+      console.log(error)
+    }
+  }
 
   if (isLoading || arenaAndTradingAccount == undefined) {
     return (
@@ -51,6 +62,7 @@ const ArenaPage = () => {
           numberOfParticipants={arenaAndTradingAccount.arena?.totalTraders ?? 0}
           startEpoch={Number(arenaAndTradingAccount.arena?.startsAt ?? 0)}
           endEpoch={Number(arenaAndTradingAccount.arena?.expiresAt ?? 0)}
+          registrationHandler={() => registerForArena()}
         />
       </div>
     </div>
@@ -58,4 +70,4 @@ const ArenaPage = () => {
   )
 }
 
-export default ArenaPage;
+export default RegisterForArena;

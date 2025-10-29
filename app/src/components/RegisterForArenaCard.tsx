@@ -9,6 +9,7 @@ interface RegisterForArenaProps {
   numberOfParticipants: number
   startEpoch: number
   endEpoch: number
+  registrationHandler: () => void
 }
 
 const RegisterForArena = ( props: RegisterForArenaProps ) => {
@@ -138,6 +139,7 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
       </div>
 
       <Button
+        onClick={props.registrationHandler}
         className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold"
       >
         Register

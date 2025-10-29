@@ -92,6 +92,29 @@ class AnchorProgramService {
     }
   };
 
+  createTradingAcc = async (arenaPubkey: string, returnTransactionOnly = false) => {
+    try {      
+      const transaction = await this.program.methods
+        .createTradingAccountForArena()
+        .accounts({
+          arenaAccount: arenaPubkey,
+        })
+        .transaction();
+
+      transaction.feePayer = this.wallet.publicKey;
+      transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
+
+      if (returnTransactionOnly) return transaction
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
+
+      console.log(`Trading account: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
+    } catch (error) {
+      console.error("Error creating trading account:", error);
+    }
+  };
+
   // createArena = async (name: string, startsAt: number, expiresAt: number) => {
   //   try {      
   //     const transaction = await this.program.methods

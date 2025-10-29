@@ -18,11 +18,16 @@ export const ArenaCard = ( props : ArenaCardProps ) => {
 
    const fetchTradingAccount = async () => {
       if (!programService) return false
+
+      try {
+         const tradingAccount = await programService.fetchTradingAccountForArena(props.id);
   
-      const tradingAccount = await programService.fetchTradingAccountForArena(props.id);
-  
-      return tradingAccount == null ? false : true ;
-    }
+         return tradingAccount == null ? false : true ;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (_) {
+         return null
+      }
+   }
   
    const { data: isRegistered, isLoading } = useQuery(`participation-info-${props.id.toBase58()}`, fetchTradingAccount, {
       enabled: programService != null
@@ -44,7 +49,7 @@ export const ArenaCard = ( props : ArenaCardProps ) => {
                      (isLoading || isRegistered == undefined) ? (
                         <span>Loading</span>
                      ) : isRegistered ? (
-                        <span className={`text-green-400`}>registef</span>
+                        <span className={`text-green-400`}>Registered</span>
                      ) : (
                         <span className={props.stillOpen ? "text-green-400" : "text-red-400"}>
                            {props.stillOpen ? "Open" : "Closed"}
