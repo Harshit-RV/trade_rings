@@ -66,7 +66,6 @@ const RegisterForArena = () => {
         />
       </div>
     </div>
-    
   )
 }
 
