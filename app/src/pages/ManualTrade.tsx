@@ -44,10 +44,11 @@ const ManualTrade = () => {
   const [ step2InProgress, setStep2InProgress ] = useState(false);
 
   useEffect(() => {
-    if (tradingAccount == null) {
+    // Only navigate after loading is complete and trading account is definitely null
+    if (!isLoading && tradingAccount == null) {
       navigate(`/register/${arenaId}`);
     }
-  }, [tradingAccount, arenaId, navigate]);
+  }, [tradingAccount, arenaId, navigate, isLoading]);
 
   if (tradingAccount == null) {
     return null;
