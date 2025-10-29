@@ -103,7 +103,8 @@ const ManualTrade = () => {
     }
 
     queryClient.invalidateQueries([`account-info-${tradingAccount?.selfkey}`]);
-    queryClient.invalidateQueries(["openPosAddresses", arenaId]);
+    // Refetch trading account - open positions will auto-update when count changes
+    await queryClient.refetchQueries(["tradingAccount", arenaId]);
     toast.success("Updated")
   };
 
@@ -243,9 +244,9 @@ const ManualTrade = () => {
       const sig = await programService.connection.sendRawTransaction(signedTx.serialize());
       await programService.connection.confirmTransaction(sig, "confirmed");
 
-      // Refresh data
-      queryClient.invalidateQueries([`account-info-${tradingAccount.selfkey.toBase58()}`]);
-      queryClient.invalidateQueries(["openPosAddresses", arenaId]);
+      queryClient.invalidateQueries([`account-info-${tradingAccount?.selfkey}`]);
+      // Refresh data - refetch trading account, open positions will auto-update when count changes
+      await queryClient.refetchQueries(["tradingAccount", arenaId]);
 
       toast.success("Account created and delegated. Purchase completed.");
       setOpenNewPosRequired(false);
