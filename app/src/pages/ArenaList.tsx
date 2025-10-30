@@ -1,4 +1,3 @@
-import RegisterForArenaCard from "@/components/RegisterForArenaCard";
 import { ArenaCard } from "../components/ArenaPreviewCard";
 import useProgramServices from "@/hooks/useProgramServices";
 import { useQuery } from "react-query";

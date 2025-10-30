@@ -61,7 +61,7 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
   });
 
   const openPosAddressesQuery = useQuery({
-    queryKey: ["openPosAddresses", arenaId],
+    queryKey: ["openPosAddresses", arenaId, tradingAccountQuery.data?.openPositionsCount],
     queryFn: async () => {
       if (!programService || !tradingAccountQuery.data) return null;
       return programService.getOpenPosAccAddresses(tradingAccountQuery.data);

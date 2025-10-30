@@ -10,16 +10,16 @@ const ManualDelegate = () => {
   const { arenaId, delegationStatusByAccount, deadPosAccounts, tradingAccount, openPosAddresses, delegateTradingAcc } = useManualTradeData()
    
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const commitAll = async () => {
-    // TODO: centralize all these null checks
-    if (!programServiceER || !tradingAccount) return
+  // const commitAll = async () => {
+  //   // TODO: centralize all these null checks
+  //   if (!programServiceER || !tradingAccount) return
 
-    await programServiceER.commitState(String(tradingAccount.selfkey))
+  //   await programServiceER.commitState(String(tradingAccount.selfkey))
 
-    for (let i = 0; i < openPosAddresses.length; i++ ) {
-      await programServiceER.commitState(String(openPosAddresses[i].selfKey))
-    }
-  }
+  //   for (let i = 0; i < openPosAddresses.length; i++ ) {
+  //     await programServiceER.commitState(String(openPosAddresses[i].selfKey))
+  //   }
+  // }
 
   const undelegateAll = async () => {
     if (!programServiceER) return

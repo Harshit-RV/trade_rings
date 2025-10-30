@@ -44,10 +44,11 @@ const RegisterForArena = () => {
   }
 
   useEffect(() => {
-    if (arenaAndTradingAccount?.tradingAccount != null) {
+    // Only navigate after loading is complete and trading account exists
+    if (!isLoading && arenaAndTradingAccount?.tradingAccount != null) {
       navigate(`/trade/${arenaId}`);
     }
-  }, [arenaAndTradingAccount, arenaId, navigate]);
+  }, [arenaAndTradingAccount, arenaId, navigate, isLoading]);
 
   if (isLoading || arenaAndTradingAccount == undefined) {
     return (

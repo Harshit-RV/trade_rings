@@ -273,6 +273,8 @@ class AnchorProgramService {
       const signedTx = await this.wallet.signTransaction(transaction);
       const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
 
+      await this.connection.confirmTransaction(txSig, "processed");
+
       console.log(`Position opened: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
     } catch (error) {
       console.error("Error opening position:", error);
@@ -328,7 +330,8 @@ class AnchorProgramService {
       const signedTx = await this.wallet.signTransaction(transaction);
       const txSig = await  this.connection.sendRawTransaction(signedTx.serialize());
 
-      
+      // Wait for transaction confirmation before proceeding
+      await this.connection.confirmTransaction(txSig, "processed");
       console.log(`Position updated: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
 
     } catch (error) {
