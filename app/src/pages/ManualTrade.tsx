@@ -48,7 +48,11 @@ const ManualTrade = () => {
     if (!isLoading && tradingAccount == null) {
       navigate(`/register/${arenaId}`);
     }
-  }, [tradingAccount, arenaId, navigate, isLoading]);
+  }, [tradingAccount, isLoading, arenaId, navigate]);
+
+  if (isLoading) {
+    return <div>loading</div>;
+  }
 
   if (tradingAccount == null) {
     return null;

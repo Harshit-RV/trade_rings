@@ -109,6 +109,9 @@ class AnchorProgramService {
       const signedTx = await this.wallet.signTransaction(transaction);
       const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
 
+      // Wait for transaction confirmation before proceeding
+      await this.connection.confirmTransaction(txSig, "processed");
+
       console.log(`Trading account: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
     } catch (error) {
       console.error("Error creating trading account:", error);
