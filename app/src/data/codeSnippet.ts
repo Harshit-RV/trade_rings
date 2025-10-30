@@ -1,4 +1,5 @@
-import requests
+
+let snippet=`import requests
 import json
 from typing import List, Dict, Optional, Any
 from uagents import Agent, Context, Model
@@ -164,3 +165,5 @@ async def main(ctx: Context):
     
     #trading = Trading(ctx.logger)
     ctx.logger("Hello Welcome to this algo")
+`
+export default snippet;

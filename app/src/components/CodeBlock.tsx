@@ -7,6 +7,7 @@ type CodeBlockProps = {
   language?: string; // "python" by default
   className?: string;
   highlight?: boolean;
+  height?: number | string; // fixed height with scroll
 };
 
 export default function CodeBlock({
@@ -14,6 +15,7 @@ export default function CodeBlock({
   language = "python",
   className = "",
   highlight = true,
+  height = 500,
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
@@ -77,7 +79,10 @@ export default function CodeBlock({
       )}
 
       {/* Syntax highlighter content */}
-      <div className="pt-6 pb-6 px-6">
+      <div
+        className="pt-6 pb-6 px-6 overflow-auto"
+        style={{ maxHeight: typeof height === "number" ? `${height}px` : height }}
+      >
         <SyntaxHighlighter
           language={highlight ? language : language}
           style={oneDark}
@@ -88,6 +93,7 @@ export default function CodeBlock({
             fontSize: 13,
             lineHeight: "1.45",
             userSelect: "text",
+            overflowX: "auto",
           }}
           showLineNumbers={false}
           wrapLines={true}
