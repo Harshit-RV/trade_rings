@@ -8,6 +8,7 @@ import ArenaList from './pages/ArenaList';
 import Breadcrumb from './components/common/Breadcrumb';
 import TradeTabs from './components/TradeTabs';
 import RegisterForArena from './pages/RegisterForArena';
+import AgentTrade from './pages/AgentTrade';
 
 
 const App = () => {
@@ -37,6 +38,7 @@ const App = () => {
         {/* <Route path='docs' element={<AnchorInteractor />} />   */}
         <Route path='/trade/:arenaId' element={ <ManualTrade />} />  
         <Route path='/register/:arenaId' element={ <RegisterForArena />} />  
+        <Route path='/agent/:arenaId' element={ <AgentTrade />} />  
       </Routes>
     </div>
   );

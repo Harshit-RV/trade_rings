@@ -6,12 +6,14 @@ type CodeBlockProps = {
   code: string;
   language?: string; // "python" by default
   className?: string;
+  highlight?: boolean;
 };
 
 export default function CodeBlock({
   code,
   language = "python",
   className = "",
+  highlight = true,
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
@@ -41,12 +43,19 @@ export default function CodeBlock({
   return (
     <div
       className={
-        "relative rounded-2xl overflow-hidden shadow-lg " +
+        "codeblock-no-bg relative rounded-2xl overflow-hidden shadow-lg " +
         "bg-[#0b0f14] border border-[#1f2937] " +
-        "text-sm " +
+        "text-sm selection:bg-transparent selection:text-inherit " +
         className
       }
     >
+      <style>
+        {`
+          .codeblock-no-bg * { background: transparent !important; }
+          .codeblock-no-bg ::selection { background: transparent !important; }
+          .codeblock-no-bg ::-moz-selection { background: transparent !important; }
+        `}
+      </style>
       {/* Copy button (top-right) */}
       <div className="absolute right-3 top-3 z-10">
         <button
@@ -70,7 +79,7 @@ export default function CodeBlock({
       {/* Syntax highlighter content */}
       <div className="pt-6 pb-6 px-6">
         <SyntaxHighlighter
-          language={language}
+          language={highlight ? language : language}
           style={oneDark}
           customStyle={{
             background: "transparent", // keep parent's bg
@@ -78,6 +87,7 @@ export default function CodeBlock({
             padding: 0,
             fontSize: 13,
             lineHeight: "1.45",
+            userSelect: "text",
           }}
           showLineNumbers={false}
           wrapLines={true}

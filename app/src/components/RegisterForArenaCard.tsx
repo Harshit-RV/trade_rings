@@ -7,6 +7,7 @@ interface RegisterForArenaProps {
   startEpoch: number
   endEpoch: number
   registrationHandler: () => void
+  embedded?: boolean
 }
 
 const RegisterForArena = ( props: RegisterForArenaProps ) => {
@@ -28,7 +29,7 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
   // );
 
   return (
-    <div className="bg-[#1F1F1F]/60 p-6 rounded-4xl w-full flex flex-col gap-4 border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
+    <div className={`${props.embedded ? "p-0 border-0 bg-transparent" : "bg-[#1F1F1F]/60 p-6 border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]"} rounded-4xl w-full flex flex-col gap-4`}>
       
       <h1 className="font-bold text-xl mb-1 mt-2">Register for {props.name}</h1>
 
