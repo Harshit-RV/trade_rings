@@ -163,4 +163,7 @@ async def recieved_history(ctx: Context, sender: str, msg: HistoryReply):
 async def main(ctx: Context):
     
     #trading = Trading(ctx.logger)
-    ctx.logger("Hello Welcome to this algo")
+    ctx.logger("Starting the Agent")
+    pyth_client=PythClient()
+    prices = await pyth_client.get_pyth_prices(tokens_list)
+    ctx.logger.info(str(prices))

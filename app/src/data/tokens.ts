@@ -14,7 +14,7 @@ export const TOKENS: Token[] = [
     name: "Bitcoin",
     address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
     price: 1.00,
-    image: "https://s2.coinmarketcap.com/static/img/coins/200x200/3408.png",
+    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png",
     decimals: 6,
   },
   {
@@ -38,7 +38,7 @@ export const TOKENS: Token[] = [
     name: "Raydium",
     address: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
     price: 2.34,
-    image: "https://s2.coinmarketcap.com/static/img/coins/200x200/8526.png",
+    image: "https://s2.coinmarketcap.com/static/img/coins/64x64/8526.png",
     decimals: 6,
   },
   {

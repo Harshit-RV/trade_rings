@@ -3,6 +3,9 @@ import RegisterForArenaCard from "./RegisterForArenaCard";
 import CodeBlock from "./CodeBlock";
 import { TOKENS } from "@/data/tokens";
 import codeSnippet from './../data/codeSnippet.ts';
+import { Keypair } from '@solana/web3.js';
+import bs58 from 'bs58';
+import { Connection, SystemProgram, Transaction, LAMPORTS_PER_SOL, clusterApiUrl, PublicKey } from "@solana/web3.js";
 
 type AgentTradeCardProps = {
   arenaName?: string;
@@ -22,6 +25,46 @@ const AgentTradeCard = ({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
   const tokenGrid = useMemo(() => TOKENS.slice(0, 9), []);
+  const [walletGenerated, setWalletGenerated] = useState<boolean>(false);
+  const [isFunding, setIsFunding] = useState<boolean>(false);
+  const [isFunded, setIsFunded] = useState<boolean>(false);
+
+  const handleFundWallet = async () => {
+    try {
+      const toPubkeyStr = localStorage.getItem("publicKey");
+      if (!toPubkeyStr) return;
+      const provider = (window as any).solana;
+      if (!provider?.isPhantom) {
+        window.open("https://phantom.app/", "_blank");
+        return;
+      }
+      await provider.connect();
+      const fromPubkey: PublicKey = new PublicKey(provider.publicKey.toString());
+      const toPubkey = new PublicKey(toPubkeyStr);
+      const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+
+      const tx = new Transaction();
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey,
+          toPubkey,
+          lamports: 0.1 * LAMPORTS_PER_SOL,
+        })
+      );
+      tx.feePayer = fromPubkey;
+      const { blockhash } = await connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+
+      setIsFunding(true);
+      const { signature } = await provider.signAndSendTransaction(tx);
+      await connection.confirmTransaction(signature, "confirmed");
+      setIsFunded(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsFunding(false);
+    }
+  };
 
   const goNext = () => setStep((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev));
   const goBack = () => setStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3) : prev));
@@ -52,6 +95,7 @@ const AgentTradeCard = ({
           <p className="text-center text-sm text-gray-300">
             Your agent needs its own pair of keys to securely manage funds and execute trades on your behalf.
           </p>
+          {!walletGenerated && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
             <div className="rounded-3xl px-6 py-6 border border-[#3C3C3C]/60 bg-[#161616]/60">
               <div className="flex flex-col items-center gap-3">
@@ -59,7 +103,26 @@ const AgentTradeCard = ({
                 <p className="text-xs text-gray-400 text-center">
                   Safest and easiest way. Creates a dedicated wallet for your agent.
                 </p>
-                <button className="bg-[#00C9C8] w-full rounded-2xl h-12 text-black font-bold mt-2">Create New Wallet</button>
+                <button onClick={async()=>{
+                   
+                   // 1. Generate a new, random keypair
+                    const keypair = Keypair.generate();
+
+                    // 2. Get the Public Key (as a string)
+                    const publicKey = keypair.publicKey.toBase58();
+                    console.log("✅ Public Key (Wallet Address):", publicKey);
+
+                    // 3. Get the Private Key (as a 64-byte array)
+                    const privateKeyBytes = keypair.secretKey;
+                    console.log("✅ Private Key (Bytes):", privateKeyBytes);
+
+                    // 4. Get the Private Key as a Base58 String (for wallet import)
+                    const privateKeyString = bs58.encode(privateKeyBytes);
+                    console.log("✅ Private Key (Base58 String):", privateKeyString);
+                    localStorage.setItem("privateKey", privateKeyString);
+                    localStorage.setItem("publicKey", publicKey);
+                     setWalletGenerated(true);
+                }} className="bg-[#00C9C8] w-full rounded-2xl h-12 text-black font-bold mt-2">Create New Wallet</button>
               </div>
             </div>
             <div className="rounded-3xl px-6 py-6 border border-[#3C3C3C]/60 bg-[#161616]/60">
@@ -74,11 +137,17 @@ const AgentTradeCard = ({
                     placeholder="Enter your Private Key..."
                     className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3C3C3C]/60 rounded-xl text-sm text-gray-400"
                   />
-                  <button className="bg-[#00C9C8] rounded-xl h-11 px-4 text-black font-bold">Import</button>
+                  <button onClick={()=> setWalletGenerated(true)} className="bg-[#00C9C8] rounded-xl h-11 px-4 text-black font-bold">Import</button>
                 </div>
               </div>
             </div>
           </div>
+          )}
+          {walletGenerated && (
+            <div className="rounded-3xl px-6 py-10 border border-[#3C3C3C]/60 bg-[#161616]/60 flex items-center justify-center">
+              <p className="text-lg font-semibold text-white">Wallet generated</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -131,7 +200,13 @@ const AgentTradeCard = ({
               })}
             </div>
           </div>
-          <button className="bg-[#00C9C8] w-full rounded-4xl h-12 text-lg font-bold">Fund Your Agent’s Secure Wallet</button>
+          {isFunded ? (
+            <div className="w-full rounded-4xl h-12 text-lg font-bold flex items-center justify-center border border-[#3C3C3C]/60">
+              Agent is funded and registered
+            </div>
+          ) : (
+            <button onClick={handleFundWallet} disabled={isFunding} className={`bg-[#00C9C8] w-full rounded-4xl h-12 text-lg font-bold ${isFunding ? "opacity-60 cursor-not-allowed" : ""}`}>{isFunding ? "Funding..." : "Fund Your Agent's Secure Wallet"}</button>
+          )}
         </div>
       )}
 
@@ -182,7 +257,7 @@ const AgentTradeCard = ({
                 <p className="text-sm mb-2 text-white/80">.env</p>
                 <CodeBlock
                   language="bash"
-                  code={`# Example .env\nPRIVATE_KEY=\nRPC_URL=https://...\nPROGRAM_ID=...`}
+                  code={`CLIENT_PRIVATE_KEY=${localStorage.getItem("privateKey")}\nOPERATOR_PUBLIC_KEY=b'-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwXcl5BJi9OCe5HTYZ2zB\\n7JXcduhHv+VGGaP3sIoW9O2JsmDC9MjVz/yo2yptbQbI3T9gcS16nrWzFadIMrGe\\nkANkQCdf+j3RneCsxxPCB6JHM1/EzG77pxksc1+bU2Bkv6snorAhC0l6ET2Ylg+u\\nHfZed+tQLZ5izxLZROe6Iey1eUFBOWU6FSeFkG06a5b4J6XymjV+6KOUpXTf8IHI\\npb6B3QfA4abCS5nAgreeq/FaDYM97WpFx5Zh4fizM+mz31GfZ8MasmveIPpTO4Di\\n1d1IIKilxh8wHGtjs4yQsrY+HNuabMPsNNG+/8WZfnXL2wxIXPkzd45dZeewo9oL\\nnQIDAQAB\\n-----END PUBLIC KEY-----\\n'`}
                 />
               </div>
               <div>

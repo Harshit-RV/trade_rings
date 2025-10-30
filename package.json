@@ -6,6 +6,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
+    "@solana/kit": "^5.0.0",
     "anchor-litesvm": "^0.2.1"
   },
   "devDependencies": {
