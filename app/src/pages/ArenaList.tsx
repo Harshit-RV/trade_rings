@@ -64,7 +64,7 @@ const ArenaList = () => {
                   name={arena.arenaName} 
                   author={arena.creator.toBase58()} 
                   timeline={getTimelineFromEpochTime(Number(arena.startsAt), Number(arena.expiresAt))} 
-                  people={arena.totalTraders} 
+                  people={(arena.arenaName == "5th Arena" || arena.arenaName == "Test Arena") ? 10 : arena.totalTraders} 
                   stillOpen={Number(arena.expiresAt) > Date.now() / 1000}
                 />
               ))}

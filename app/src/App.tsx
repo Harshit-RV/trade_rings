@@ -6,7 +6,6 @@ import { useEffect } from 'react';
 import ManualTrade from './pages/ManualTrade';
 import ArenaList from './pages/ArenaList';
 import Breadcrumb from './components/common/Breadcrumb';
-import TradeTabs from './components/TradeTabs';
 import RegisterForArena from './pages/RegisterForArena';
 import AgentTrade from './pages/AgentTrade';
 
@@ -29,7 +28,7 @@ const App = () => {
         </div>
         <div className="absolute left-1/2 -translate-x-1/2">
           {/* will only be visible on Trade screen */}
-          <TradeTabs />
+          {/* <TradeTabs /> */}
         </div>
         <div><WalletMultiButton/></div>
       </div>

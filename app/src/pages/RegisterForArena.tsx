@@ -1,7 +1,7 @@
 import useProgramServices from "@/hooks/useProgramServices";
 import { useNavigate, useParams } from "react-router";
 import { PublicKey } from "@solana/web3.js";
-import { useQuery } from "react-query";
+import { useQuery, useQueryClient } from "react-query";
 import RegisterForArenaCard from "@/components/RegisterForArenaCard";
 import type { ArenaAccount, TradingAccountForArena } from "@/types/types";
 import { useEffect, useState } from "react";
@@ -16,6 +16,8 @@ const RegisterForArena = () => {
   const { programService } = useProgramServices();
   const navigate = useNavigate();
   const [selectedMode, setSelectedMode] = useState<"manual" | undefined>(undefined);
+  const queryClient = useQueryClient();
+
 
   const fetchArenaAndTradingAccount = async () : Promise<RegisterForArenaQueryData> => {
      if (!programService || !arenaId) return { arena: undefined, tradingAccount: undefined };
@@ -29,7 +31,7 @@ const RegisterForArena = () => {
      };
    }
 
-  const { data: arenaAndTradingAccount, isLoading, refetch } = useQuery(`arena-info-${arenaId}`, fetchArenaAndTradingAccount, {
+  const { data: arenaAndTradingAccount, isLoading, refetch } = useQuery(`arena-registration-info-${arenaId}`, fetchArenaAndTradingAccount, {
      enabled: programService != null
   })
 
@@ -38,7 +40,10 @@ const RegisterForArena = () => {
 
     try {
       await programService.createTradingAcc(arenaId)
-      refetch()
+      // Invalidate the ManualTrade query cache so it picks up the new trading account
+      await queryClient.invalidateQueries(["tradingAccount", arenaId]);
+      // Refetch this page's query
+      await refetch()
     } catch (error) {
       console.log(error)
     }
@@ -49,7 +54,7 @@ const RegisterForArena = () => {
     if (!isLoading && arenaAndTradingAccount?.tradingAccount != null) {
       navigate(`/trade/${arenaId}`);
     }
-  }, [arenaAndTradingAccount, arenaId, navigate, isLoading]);
+  }, [arenaAndTradingAccount, isLoading, arenaId, navigate]);
 
   if (isLoading || arenaAndTradingAccount == undefined) {
     return (
