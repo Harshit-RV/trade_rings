@@ -19,6 +19,7 @@ interface ManualTradeDataContextValue {
   addToPosMappedByAsset: (key: string, value: OpenPosAccAddress) => void
   addDeadPosAccount: (account: PublicKey | string) => void
   delegateTradingAcc: () => Promise<void>
+  allAccountsDelegated: boolean;
 }
 
 const ManualTradeDataContext = createContext<ManualTradeDataContextValue | null>(null);
@@ -104,6 +105,14 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
 
   const isDelegationLoading = delegationQueries.some((q) => q.isLoading);
 
+  // Check if all accounts are delegated (excluding dead accounts)
+  const allAccountsDelegated = useMemo(() => {
+    if (Object.keys(delegationStatusByAccount).length === 0) return true;
+    return Object.keys(delegationStatusByAccount).every(
+      (acc) => deadPosAccounts.includes(acc) || delegationStatusByAccount[acc]
+    );
+  }, [delegationStatusByAccount, deadPosAccounts]);
+
   const value: ManualTradeDataContextValue = {
     // TODO: improve the check
     arenaId: arenaId ?? "",
@@ -117,6 +126,7 @@ export const ManualTradeDataProvider = ({ children }: { children: ReactNode }) =
     delegateTradingAcc: delegateTradingAccount,
     posMappedByAsset: posMappedByAsset,
     addToPosMappedByAsset: addToPosMappedByAsset,
+    allAccountsDelegated,
   };
 
   return (

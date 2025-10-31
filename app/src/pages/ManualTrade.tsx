@@ -117,6 +117,8 @@ const ManualTrade = () => {
       setStep1InProgress(true);
       await programServiceER.undelegateAccount(String(tradingAccount.selfkey));
       setStep1Done(true);
+      // Invalidate delegation status for trading account
+      queryClient.invalidateQueries(["delegationStatus", arenaId, tradingAccount.selfkey.toBase58()]);
       toast.success("Trading account undelegated on rollup");
     } catch {
       toast.error("Failed to undelegate");
@@ -179,6 +181,8 @@ const ManualTrade = () => {
 
       queryClient.invalidateQueries([`account-info-${tradingAccount.selfkey.toBase58()}`]);
       await queryClient.refetchQueries(["tradingAccount", arenaId]);
+      // Invalidate delegation status for both trading account and new position account
+      queryClient.invalidateQueries(["delegationStatus", arenaId, tradingAccount.selfkey.toBase58()]);
       queryClient.invalidateQueries(["delegationStatus", arenaId, posPda.toBase58()]);
 
       toast.success("All done! Purchase completed.");
@@ -201,7 +205,7 @@ const ManualTrade = () => {
 
   return (
     <div className="flex relative items-start justify-center pt-20 px-8 gap-6">
-      <div className="absolute top-3 left-3 w-[15%]">
+      <div className="absolute top-3 left-3 lg:w-[20%] xl:w-[15%]">
         <Leaderboard />
       </div>
       

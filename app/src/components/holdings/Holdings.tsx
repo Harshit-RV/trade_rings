@@ -14,6 +14,7 @@ const Holdings = ( { tradingAccount, openPositions } : HoldingsProps ) => {
   return (
     <div className="bg-[#000000]/40 rounded-3xl p-6 w-full border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
       <h2 className="text-md font-bold mb-4">Your Holdings</h2>
+      <div className="text-sm font-bold text-gray-400 mb-1">USDC Balance</div>
       <TradingAccountInfo account={tradingAccount.selfkey}/>
       <div className="space-y-2">
         
