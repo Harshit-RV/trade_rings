@@ -6,7 +6,9 @@ interface RegisterForArenaProps {
   numberOfParticipants: number
   startEpoch: number
   endEpoch: number
-  registrationHandler: () => void
+  registrationHandler?: () => void
+  embedded?: boolean
+  
 }
 
 const RegisterForArena = ( props: RegisterForArenaProps ) => {
@@ -28,7 +30,7 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
   // );
 
   return (
-    <div className="bg-[#1F1F1F]/60 p-6 rounded-4xl w-full flex flex-col gap-4 border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]">
+    <div className={`${props.embedded ? "p-0 border-0 bg-transparent" : "bg-[#1F1F1F]/60 p-6 border border-[rgba(255,255,255,0.15)] backdrop-blur-[10px]"} rounded-4xl w-full flex flex-col gap-4`}>
       
       <h1 className="font-bold text-xl mb-1 mt-2">Register for {props.name}</h1>
 
@@ -136,12 +138,12 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
         <span className="text-sm font-bold text-yellow-300/70">You can claim back the rent of all accounts at the end of the arena</span>
       </div> */}
 
-      <Button
+      {!props.embedded&&<Button
         onClick={props.registrationHandler}
         className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold"
       >
         Register
-      </Button>
+      </Button>}
 
     </div>
   );

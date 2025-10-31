@@ -13,6 +13,7 @@ import type { OpenPosAccAddress, SwapTransaction } from "@/types/types";
 import { useQueryClient } from "react-query";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey, Transaction } from "@solana/web3.js";
+import TestComponent from "@/components/main-tiles/TestComponent";
 import { OPEN_POSITION_ACCOUNT_SEED } from "@/constants";
 import { useNavigate } from "react-router";
 
@@ -225,6 +226,15 @@ const ManualTrade = () => {
         />
       </div>
 
+         {/* <TradingViewWidget 
+           fromToken={fromToken.symbol} 
+           toToken={toToken.symbol} 
+           height={300}
+         />
+         <BotTrading/> */}
+          <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
+         <TestComponent/>
+         </div>
       {
         tradingAccount && (
           <div className="absolute top-3 right-3 flex flex-col gap-4 w-[25%]">
@@ -234,8 +244,7 @@ const ManualTrade = () => {
             <Holdings tradingAccount={tradingAccount} openPositions={openPosAddresses} />
             
             {/* <HoldingsChart data={[{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700},{x: 'Page A', y: 400}, {x: 'Page B', y: 300}, {x: 'Page C', y: 200}, {x: 'Page D', y: 700}]} x_axis="x" y_axis="y"/> */}
-          </div>
-        )
+          </div>)
       }
     </div>
   ) 
