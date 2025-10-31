@@ -169,15 +169,19 @@ const ManualTrade = () => {
       const signedTx = await wallet.signTransaction(compositeTx);
       const sig = await programService.connection.sendRawTransaction(signedTx.serialize());
       await programService.connection.confirmTransaction(sig, "confirmed");
+      toast.success("Position created and delegated!");
 
-      // Refresh data
+      // Commit both trading account and position account state in a single transaction
+      await programServiceER.commitMultipleAccounts([
+        tradingAccount.selfkey.toBase58(),
+        posPda.toBase58()
+      ]);
+
       queryClient.invalidateQueries([`account-info-${tradingAccount.selfkey.toBase58()}`]);
-      // Refetch trading account first to update openPositionsCount
       await queryClient.refetchQueries(["tradingAccount", arenaId]);
-      // Invalidate delegation status for the new position
       queryClient.invalidateQueries(["delegationStatus", arenaId, posPda.toBase58()]);
 
-      toast.success("Account created and delegated. Purchase completed.");
+      toast.success("All done! Purchase completed.");
       setOpenNewPosRequired(false);
       setNewPosAsset(null);
       setNewPosAmount(0);
