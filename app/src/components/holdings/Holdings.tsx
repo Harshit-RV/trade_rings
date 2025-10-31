@@ -19,7 +19,7 @@ const Holdings = ( { tradingAccount, openPositions } : HoldingsProps ) => {
         
         <div className="flex justify-between text-sm font-medium text-gray-400 mb-3">
           <span>Asset</span>
-          <span>Quantity</span>
+          {/* <span>Quantity</span> */}
           <span>Value</span>
         </div>
 

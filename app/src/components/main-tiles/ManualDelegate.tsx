@@ -2,10 +2,12 @@ import { Button } from "../ui/button";
 import useProgramServices from "@/hooks/useProgramServices";
 import useManualTradeData from "@/hooks/useManualTradeData";
 import type { Transaction } from "@solana/web3.js";
+import { useQueryClient } from "react-query";
 
 
 const ManualDelegate = () => {
   const { programServiceER, programService, wallet } = useProgramServices();
+  const queryClient = useQueryClient();
 
   const { arenaId, delegationStatusByAccount, deadPosAccounts, tradingAccount, openPosAddresses, delegateTradingAcc } = useManualTradeData()
    
@@ -29,15 +31,26 @@ const ManualDelegate = () => {
     for (let i = 0; i < openPosAddresses.length; i++ ) {
       await programServiceER.undelegateAccount(String(openPosAddresses[i].selfKey))
     }
+
+    // Refresh delegation status for all accounts
+    queryClient.invalidateQueries(["delegationStatus", arenaId]);
   }
 
   const delegateAll = async () => {
     if (!programService) return
 
-    // TODO: handle state that tracks whether trading acc is delegated or not and use that state here
-    // const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
-    // if (!delegateTradeAccTx) return
+    const txList: Transaction[] = []
+
+    // Check if trading account is undelegated and delegate it if needed
+    const tradingAccountKey = tradingAccount?.selfkey?.toBase58();
+    if (tradingAccountKey && !delegationStatusByAccount[tradingAccountKey]) {
+      const delegateTradeAccTx = await programService.delegateTradingAccount(arenaId, true)
+      if (delegateTradeAccTx) {
+        txList.push(delegateTradeAccTx)
+      }
+    }
     
+    // Delegate all undelegated position accounts
     const delegatePosTxList = await Promise.all(
       Object.keys(delegationStatusByAccount).map(async (acc) => {
         if (deadPosAccounts.includes(acc)) return null;
@@ -50,7 +63,12 @@ const ManualDelegate = () => {
       })
     ).then(results => results.filter(tx => tx !== null));
 
-    const txList = [ ...delegatePosTxList ]
+    txList.push(...delegatePosTxList)
+
+    if (txList.length === 0) {
+      console.log("All accounts are already delegated");
+      return;
+    }
 
     const signedTx = await wallet?.signAllTransactions(txList)
     if (!signedTx) return;
@@ -65,6 +83,9 @@ const ManualDelegate = () => {
         programService.connection.confirmTransaction(sig, "confirmed")
       )
     );
+
+    // Refresh delegation status for all accounts
+    queryClient.invalidateQueries(["delegationStatus", arenaId]);
   }
 
   return (

@@ -86,7 +86,7 @@ const OpenPositionAccountInfo = ( { selfKey, seed } : OpenPosAccAddress ) => {
         <span className="text-sm">{data.asset}</span>
       </div>
       <span className="text-sm">{Helper.formatQuantity(data.quantityRaw)}</span>
-      <div className={`size-2 rounded ${data.isDelegated ? "bg-green-500" : "bg-yellow-500"}`} />
+      {/* <div className={`size-2 rounded ${data.isDelegated ? "bg-green-500" : "bg-yellow-500"}`} /> */}
       {/* <Button onClick={() => delegateOpenPosAccount(position)} className="text-sm h-5 font-medium">Delegate</Button> */}
     </div>
   )
