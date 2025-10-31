@@ -109,6 +109,9 @@ class AnchorProgramService {
       const signedTx = await this.wallet.signTransaction(transaction);
       const txSig = await this.connection.sendRawTransaction(signedTx.serialize());
 
+      // Wait for transaction confirmation before proceeding
+      await this.connection.confirmTransaction(txSig, "processed");
+
       console.log(`Trading account: https://solana.fm/tx/${txSig}?cluster=devnet-alpha`);
     } catch (error) {
       console.error("Error creating trading account:", error);
@@ -428,6 +431,43 @@ class AnchorProgramService {
       console.log(`(ER) Commited: https://solana.fm/tx/${signature}?cluster=devnet-alpha`);
     } catch (error) {
       console.error("error in (ER) commit", error)
+    }
+  }
+
+  commitMultipleAccounts = async (accounts: string[]) => {
+    try {
+      const tempKeypair = Keypair.fromSeed(this.wallet.publicKey.toBytes());
+      const { value: { blockhash, lastValidBlockHeight } } = await this.connection.getLatestBlockhashAndContext();
+
+      const instructions = await Promise.all(
+        accounts.map(account => 
+          this.program.methods
+            .commitAccount()
+            .accounts({ account })
+            .instruction()
+        )
+      );
+
+      const { Transaction } = await import("@solana/web3.js");
+      const transaction = new Transaction();
+      transaction.add(...instructions);
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = tempKeypair.publicKey;
+      transaction.sign(tempKeypair);
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      
+      const raw = signedTx.serialize();
+      const signature = await this.connection.sendRawTransaction(raw, {
+        skipPreflight: true,
+      });
+
+      await this.connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, "processed");
+      
+      console.log(`(ER) Committed ${accounts.length} accounts: https://solana.fm/tx/${signature}?cluster=devnet-alpha`);
+    } catch (error) {
+      console.error("error in (ER) commit multiple accounts", error)
+      throw error;
     }
   }
 

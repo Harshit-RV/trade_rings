@@ -5,6 +5,7 @@ import { TOKENS } from "@/data/tokens";
 import { IoSwapVertical } from "react-icons/io5";
 import TokenSelector from "@/components/trade/TokenSelector";
 import type { SwapTransaction } from "@/types/types";
+import useManualTradeData from "@/hooks/useManualTradeData";
 
 interface OpenNewPosContext {
   required: boolean;
@@ -21,6 +22,8 @@ interface SwapComponentProps {
 
 const SwapComponent = ({ balances, swapHandler, openNewPosContext }: SwapComponentProps) => {
   
+  const { allAccountsDelegated } = useManualTradeData();
+
   const [ swapTransaction, setSwapTransaction ] = useState<SwapTransaction>({
     fromToken: TOKENS[0],
     toToken: TOKENS[1],
@@ -139,7 +142,7 @@ const SwapComponent = ({ balances, swapHandler, openNewPosContext }: SwapCompone
               className="bg-transparent font-semibold text-2xl text-right focus:outline-none w-full"
             />
             {/* Max balance hint */}
-            <div className="text-xs text-gray-400 pt-1 w-full text-right">Max: {(balances[swapTransaction.fromToken.symbol] ?? 0).toLocaleString()}</div>
+            {/* <div className="text-xs text-gray-400 pt-1 w-full text-right">Max: {(balances[swapTransaction.fromToken.symbol] ?? 0).toLocaleString()}</div> */}
           </div>
         </div>
 
@@ -201,20 +204,28 @@ const SwapComponent = ({ balances, swapHandler, openNewPosContext }: SwapCompone
 
         </div>
       ) : (
-        <Button
-          onClick={() =>
-            swapHandler({
-              fromToken: swapTransaction.fromToken,
-              toToken: swapTransaction.toToken,
-              fromAmount: parseInputNumber(fromAmountInput),
-              toAmount: parseInputNumber(toAmountInput),
-              slippagePercent: swapTransaction.slippagePercent,
-            })
-          }
-          className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold"
-        >
-          Swap
-        </Button>
+        <>
+          {!allAccountsDelegated && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-3 text-sm text-yellow-300">
+              Please fix sync issues in the Execution Engine section above before trading.
+            </div>
+          )}
+          <Button
+            onClick={() =>
+              swapHandler({
+                fromToken: swapTransaction.fromToken,
+                toToken: swapTransaction.toToken,
+                fromAmount: parseInputNumber(fromAmountInput),
+                toAmount: parseInputNumber(toAmountInput),
+                slippagePercent: swapTransaction.slippagePercent,
+              })
+            }
+            disabled={!allAccountsDelegated}
+            className="bg-[#00C9C8] hover:cursor-pointer w-full rounded-4xl h-12 text-lg font-bold disabled:bg-gray-600 disabled:cursor-not-allowed"
+          >
+            Swap
+          </Button>
+        </>
       )}
     </div>
   );
