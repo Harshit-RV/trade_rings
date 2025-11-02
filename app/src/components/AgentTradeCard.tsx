@@ -220,7 +220,7 @@ const AgentTradeCard = ({
                 <div>
                   <p className="font-semibold text-white">A. Find the Correct Agent Template</p>
                   <ol className="list-decimal pl-6 space-y-1">
-                    <li>Navigate to Agentverse.ai and log in to your account.</li>
+                    <li>Navigate to <a href="https://agentverse.ai" target="_blank" className="text-[#00C9C8] underline">Agentverse.ai</a> and log in to your account.</li>
                     <li>From the dashboard, click the Launch an Agent button, then select Create an Agent.</li>
                     <li>Choose View More Agent Templates to see the full library.</li>
                     <li>In the search bar, type "Storing Data" and select that template.</li>
@@ -247,7 +247,7 @@ const AgentTradeCard = ({
                 <div className="pt-1">
                   <p className="text-white/80">
                     Reference: See the full docs, code samples, and types on our
-                    <a href="#" className="text-[#00C9C8] underline ml-1">Notion Guide</a>.
+                    <a href="https://www.notion.so/Trade-Rings-Docs-29f2a3d7b016804d9c0af7aa43ca1114?source=copy_link" target="_blank" className="text-[#00C9C8] underline ml-1">Notion Guide</a>.
                   </p>
                 </div>
               </div>

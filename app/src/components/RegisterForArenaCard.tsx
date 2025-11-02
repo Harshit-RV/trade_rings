@@ -76,7 +76,7 @@ const RegisterForArena = ( props: RegisterForArenaProps ) => {
         </div>
         <div className="rounded-xl w-full px-5 py-2 border border-[#3C3C3C]/60 flex items-center justify-between">
           <p className="text-sm font-bold text-gray-400">Participants</p>
-          <p>{props.numberOfParticipants}</p>
+          <p>{10}</p>
         </div>
       </div>
 
